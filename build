@@ -41,4 +41,5 @@ make clean && make && make install PREFIX=$PREFIX) || exit 1
 ./build-xml $PREFIX || exit 1
 ./build-xslt $PREFIX || exit 1
 ./build-gettext $PREFIX || exit 1
+./build-sablot $PREFIX || exit 1
 

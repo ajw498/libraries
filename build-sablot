@@ -1,0 +1,16 @@
+#!/bin/sh
+
+SABLOT=Sablot-1.0.1
+
+if [ -n "$1" ]; then
+ PREFIX=$1
+else
+ PREFIX=/home/riscos/cross/local
+fi
+
+
+(cd $SABLOT; \
+./configure --host=arm-riscos-aof --prefix=$PREFIX \
+--with-expat=$PREFIX \
+&& make clean && make && make install) || exit 1
+
