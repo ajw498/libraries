@@ -1,6 +1,6 @@
 #!/bin/sh
 
-OPENSSL=openssl-0.9.6g
+OPENSSL=openssl-0.9.7e
 
 if [ -n "$1" ]; then
  PREFIX=$1
@@ -10,7 +10,9 @@ fi
 
 mkdir -p $PREFIX
 
-(cd $OPENSSL; ./Configure --prefix=$PREFIX \
--DNO_SYS_UN_H \
-gcc && make clean && make && make install) || exit 1
+rm -rf $OPENSSL
+tar -xzf $OPENSSL.tar.gz
 
+(cd $OPENSSL \
+&& ./Configure --prefix=$PREFIX -DNO_SYS_UN_H gcc \
+&& make && make install) || exit 1
