@@ -3,21 +3,35 @@
 #DIRS=zlib-1.1.4 jpeg-6b libpng gd regex libiconv-1.8 expat-1.95.4 Sablot-0.95
 
 OPENSSL=openssl-0.9.6g
+NEON=neon-0.22.0
+EXPAT=expat-1.95.4
+ZLIB=zlib-1.1.4 
 
-CONFIGDIRS=zlib-1.1.4 
-DIRS="$CONFIGDIRS $OPENSSL"
+CONFIGDIRS=$ZLIB 
+#DIRS="$CONFIGDIRS $OPENSSL"
 
 PREFIX=/home/riscos/cross/local
 
-for dir in $CONFIGDIRS; do
- (cd $dir; ./configure --prefix=$PREFIX)
-done
+#for dir in $CONFIGDIRS; do
+# (cd $dir; ./configure --prefix=$PREFIX)
+#done
 
-(cd $OPENSSL; ./Configure --prefix=$PREFIX -DNO_SYS_UN_H gcc)
+#(cd $OPENSSL; ./Configure --prefix=$PREFIX -DNO_SYS_UN_H gcc)
 
-for dir in $DIRS; do
- (cd $dir; make clean)
- (cd $dir; make)
- (cd $dir; make install)
-done
+#(cd $EXPAT; \
+#./configure --host=arm-riscos-aof --prefix=$PREFIX \
+#&& make clean && make && make install) || exit
+
+cat > $NEON/config.cache << EOF
+ac_cv_prog_cc_g=\${ac_cv_prog_cc_g=no}
+lt_cv_prog_cc_can_build_shared=\${lt_cv_prog_cc_can_build_shared=no}
+lt_cv_prog_cc_pic_works=\${lt_cv_prog_cc_pic_works=no}
+EOF
+
+(cd $NEON; \
+./configure --host=arm-riscos-aof -C --prefix=$PREFIX \
+--with-libs=$PREFIX --with-force-zlib --with-ssl \
+&& make clean && make && make install) || exit
+
+
 
