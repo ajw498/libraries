@@ -37,7 +37,7 @@ make clean && make && make install PREFIX=$PREFIX) || exit 1
 ./build-neon    $PREFIX || exit 1
 ./build-apr     $PREFIX || exit 1
 ./build-aprutil $PREFIX || exit 1
-./build-iconv $PREFIX || exit 1
+#./build-iconv $PREFIX || exit 1
 ./build-xml $PREFIX || exit 1
 ./build-xslt $PREFIX || exit 1
 ./build-gettext $PREFIX || exit 1
