@@ -1,0 +1,12 @@
+#!/bin/sh
+
+LIBPNG=libpng-1.2.5
+
+if [ -n "$1" ]; then
+ PREFIX=$1
+else
+ PREFIX=/home/riscos/cross/local
+fi
+
+(cd $LIBPNG; \
+make clean && make PREFIX=$PREFIX && make install PREFIX=$PREFIX) || exit 1
