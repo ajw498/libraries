@@ -4,8 +4,8 @@
 # For conditions of distribution and use, see copyright notice in png.h
 
 # Location of the zlib library and include files
-ZLIBINC = ../zlib
-ZLIBLIB = ../zlib
+ZLIBINC = $(PREFIX)/include
+ZLIBLIB = $(PREFIX)/lib
 
 # Compiler, linker, lib and other tools
 CC = gcc
@@ -17,7 +17,7 @@ RM = rm -f
 CDEBUG = -g -DPNG_DEBUG=5
 LDDEBUG =
 CRELEASE = -O2
-LDRELEASE = -s
+LDRELEASE = 
 CFLAGS = -I$(ZLIBINC) -Wall $(CRELEASE)
 LDFLAGS = -L. -L$(ZLIBLIB) -lpng -lz -lm $(LDRELEASE)
 
@@ -63,4 +63,9 @@ pngwio$(O): png.h pngconf.h
 pngwrite$(O): png.h pngconf.h
 pngwtran$(O): png.h pngconf.h
 pngwutil$(O): png.h pngconf.h
+
+install:
+	cp libpng$(A) $(PREFIX)/lib
+	cp png.h $(PREFIX)/include
+	cp pngconf.h $(PREFIX)/include
 
