@@ -1,6 +1,0 @@
-apr_atomic.lo: \
- /home/ajw498/software/httpd-2.0/srclib/apr/atomic/unix/apr_atomic.c \
- ../../include/apr.h ../../include/apr_atomic.h \
- ../../include/apr_pools.h ../../include/apr_errno.h \
- ../../include/apr_general.h ../../include/apr_want.h \
- ../../include/apr_allocator.h ../../include/apr_thread_mutex.h
