@@ -1,8 +1,0 @@
-D/sdbm////
-/.cvsignore/1.1/Sat Jan  4 21:16:05 2003//
-/Makefile.in/1.13/Sat Jan  4 21:15:59 2003//
-/apr_dbm.c/1.40/Sat Jan  4 21:15:59 2003//
-/apr_dbm_gdbm.c/1.10/Sat Jan  4 21:16:06 2003//
-/apr_dbm_ndbm.c/1.2/Sat Jan  4 21:16:04 2003//
-/apr_dbm_sdbm.c/1.10/Thu Mar 13 21:02:12 2003//
-/apr_dbm_berkeleydb.c/1.23/Sun Oct 26 15:02:35 2003//
