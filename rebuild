@@ -13,14 +13,27 @@ APRUTIL=apr-util
 
 PREFIX=/home/riscos/cross/local
 
-#(cd $ZLIB; ./configure --prefix=$PREFIX \
-#&& make clean && make && make install) || exit 1
+(cd $ZLIB; ./configure --prefix=$PREFIX \
+&& make clean && make && make install) || exit 1
 
-#(cd $OPENSSL; ./Configure --prefix=$PREFIX -DNO_SYS_UN_H gcc) || exit 1
+(cd $OPENSSL; ./Configure --prefix=$PREFIX -DNO_SYS_UN_H gcc) || exit 1
 
-#(cd $EXPAT; \
-#./configure --host=arm-riscos-aof --prefix=$PREFIX \
-#&& make clean && make && make install) || exit 1
+(cd $EXPAT; \
+./configure --host=arm-riscos-aof --prefix=$PREFIX \
+&& make clean && make && make install) || exit 1
+
+(cd $LIBPNG; \
+make clean && make PREFIX=$PREFIX && make install PREFIX=$PREFIX) || exit 1
+
+(cd $LIBJPEG; \
+./configure --host=arm-riscos-aof --prefix=$PREFIX \
+&& make clean && make && make install-lib) || exit 1
+
+(cd $LIBGD; \
+make clean && make PREFIX=$PREFIX && make install PREFIX=$PREFIX) || exit 1
+
+(cd $REGEX; \
+make clean && make && make install PREFIX=$PREFIX) || exit 1
 
 cat > $NEON/config.cache << EOF
 ac_cv_prog_cc_g=\${ac_cv_prog_cc_g=no}
@@ -28,23 +41,11 @@ lt_cv_prog_cc_can_build_shared=\${lt_cv_prog_cc_can_build_shared=no}
 lt_cv_prog_cc_pic_works=\${lt_cv_prog_cc_pic_works=no}
 EOF
 
-#(cd $NEON; \
-#./configure --host=arm-riscos-aof -C --prefix=$PREFIX \
-#--with-libs=$PREFIX --with-force-zlib --with-ssl \
-#&& make clean && make && make install) || exit 1
+(cd $NEON; \
+./configure --host=arm-riscos-aof -C --prefix=$PREFIX \
+--with-libs=$PREFIX --with-force-zlib --with-ssl \
+&& make clean && make && make install) || exit 1
 
-#(cd $REGEX; \
-#make clean && make && make install PREFIX=$PREFIX) || exit 1
-
-#(cd $LIBPNG; \
-#make clean && make PREFIX=$PREFIX && make install PREFIX=$PREFIX) || exit 1
-
-#(cd $LIBJPEG; \
-#./configure --host=arm-riscos-aof --prefix=$PREFIX \
-#&& make clean && make && make install-lib) || exit 1
-
-#(cd $LIBGD; \
-#make clean && make PREFIX=$PREFIX && make install PREFIX=$PREFIX) || exit 1
 
 cat > $APR/config.cache << EOF
 ac_cv_prog_cc_g=\${ac_cv_prog_cc_g=no}
@@ -59,9 +60,9 @@ ac_cv_working_getnameinfo=${ac_cv_working_getnameinfo=no}
 ac_cv_working_getaddrinfo=${ac_cv_working_getaddrinfo=no}
 EOF
 
-#(cd $APR; \
-#./configure --host=arm-riscos-aof --prefix=$PREFIX -C \
-#&& make clean && make && make install) || exit 1
+(cd $APR; \
+./configure --host=arm-riscos-aof --prefix=$PREFIX -C \
+&& make clean && make && make install) || exit 1
 
 (cd $APRUTIL; \
 ./configure --host=arm-riscos-aof --prefix=$PREFIX \
