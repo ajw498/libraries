@@ -1,7 +1,7 @@
 #!/bin/sh
 
 OPENSSL=openssl-0.9.6g
-NEON=neon-0.22.0
+NEON=neon-0.23.5
 EXPAT=expat-1.95.4
 ZLIB=zlib-1.1.4 
 LIBPNG=libpng-1.2.0
@@ -52,13 +52,14 @@ cat > $APR/config.cache << EOF
 ac_cv_prog_cc_g=\${ac_cv_prog_cc_g=no}
 lt_cv_prog_cc_can_build_shared=\${lt_cv_prog_cc_can_build_shared=no}
 lt_cv_prog_cc_pic_works=\${lt_cv_prog_cc_pic_works=no}
-ac_cv_sizeof_off_t=${ac_cv_sizeof_off_t=4}
-ac_cv_sizeof_pid_t=${ac_cv_sizeof_pid_t=4}
-ac_cv_sizeof_size_t=${ac_cv_sizeof_size_t=4}
-ac_cv_sizeof_ssize_t=${ac_cv_sizeof_ssize_t=4}
-ac_cv_func_setpgrp_void=${ac_cv_func_setpgrp_void=no}
-ac_cv_working_getnameinfo=${ac_cv_working_getnameinfo=no}
-ac_cv_working_getaddrinfo=${ac_cv_working_getaddrinfo=no}
+ac_cv_sizeof_off_t=\${ac_cv_sizeof_off_t=4}
+ac_cv_sizeof_pid_t=\${ac_cv_sizeof_pid_t=4}
+ac_cv_sizeof_size_t=\${ac_cv_sizeof_size_t=4}
+ac_cv_sizeof_ssize_t=\${ac_cv_sizeof_ssize_t=4}
+ac_cv_func_setpgrp_void=\${ac_cv_func_setpgrp_void=no}
+ac_cv_working_getnameinfo=\${ac_cv_working_getnameinfo=no}
+ac_cv_working_getaddrinfo=\${ac_cv_working_getaddrinfo=no}
+ac_cv_sctp=\${ac_cv_sctp=no}
 EOF
 
 (cd $APR; \
@@ -75,8 +76,9 @@ cp uri/uri_delims.h.pregen uri/uri_delims.h && \
 touch uri/uri_delims.h && \
 make && make install) || exit 1
 
+exit 0
+
 (cd $GETTEXT; \
-CFLAGS=-D_INTL_REDIRECT_MACROS ./configure \
+./configure --with-included-gettext \
 --host=arm-riscos-aof --prefix=$PREFIX \
---with-included-gettext \
 && make clean && make && make install) || exit 1
