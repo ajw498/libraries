@@ -1,0 +1,16 @@
+#!/bin/sh
+
+OPENSSL=openssl-0.9.6g
+
+if [ -n "$1" ]; then
+ PREFIX=$1
+else
+ PREFIX=/home/riscos/cross/local
+fi
+
+mkdir -p $PREFIX
+
+(cd $OPENSSL; ./Configure --prefix=$PREFIX \
+-DNO_SYS_UN_H \
+gcc && make clean && make && make install) || exit 1
+

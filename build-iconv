@@ -1,0 +1,16 @@
+#!/bin/sh
+
+ICONV=libiconv-1.9.2
+
+if [ -n "$1" ]; then
+ PREFIX=$1
+else
+ PREFIX=/home/riscos/cross/local
+fi
+
+
+(cd $ICONV; \
+./configure --host=arm-riscos-aof --prefix=$PREFIX \
+--enable-extra-encodings \
+&& make clean && make && make install) || exit 1
+

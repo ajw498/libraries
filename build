@@ -3,7 +3,6 @@
 # Usage: build [prefix]
 #
 
-OPENSSL=openssl-0.9.6g
 ZLIB=zlib-1.1.4
 LIBPNG=libpng-1.2.5
 REGEX=regex
@@ -17,16 +16,9 @@ else
  PREFIX=/home/riscos/cross/local
 fi
 
-(cd $ZLIB; ./configure --prefix=$PREFIX \
-&& make clean && make && make install) || exit 1
+mkdir -p $PREFIX/bin $PREFIX/lib
 
-(cd $OPENSSL; ./Configure --prefix=$PREFIX \
--DNO_SYS_UN_H \
-gcc && make clean && make && make install) || exit 1
-
-(cd $EXPAT; \
-./configure --host=arm-riscos-aof --prefix=$PREFIX \
-&& make clean && make && make install) || exit 1
+./build-zlib   $PREFIX || exit 1
 
 (cd $LIBPNG; \
 make clean && make PREFIX=$PREFIX && make install PREFIX=$PREFIX) || exit 1
@@ -42,6 +34,7 @@ make clean && make PREFIX=$PREFIX && make install PREFIX=$PREFIX) || exit 1
 make clean && make && make install PREFIX=$PREFIX) || exit 1
 
 ./build-oslib   $PREFIX || exit 1
+./build-openssl $PREFIX || exit 1
 ./build-expat   $PREFIX || exit 1
 ./build-neon    $PREFIX || exit 1
 ./build-apr     $PREFIX || exit 1

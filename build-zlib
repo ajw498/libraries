@@ -1,0 +1,13 @@
+#!/bin/sh
+
+ZLIB=zlib-1.1.4
+
+if [ -n "$1" ]; then
+ PREFIX=$1
+else
+ PREFIX=/home/riscos/cross/local
+fi
+
+
+(cd $ZLIB; ./configure --prefix=$PREFIX \
+&& make clean && make && make install) || exit 1
