@@ -1,0 +1,124 @@
+dnl Require autoconf 2.53 for an AC_C_BIGENDIAN which supports 
+dnl cross-compiling.
+AC_PREREQ(2.53)
+
+dnl Extract the version (sans LF) from .version, created at release-time.
+m4_define(ne_version, [esyscmd([echo -n `cat .version`])])
+
+AC_INIT(neon, ne_version, [neon@webdav.org])
+
+AC_CONFIG_HEADER(config.h)
+AC_CONFIG_SRCDIR(src/ne_request.c)
+
+NEON_WITH_LIBS
+
+# Pass through initial LDFLAGS, CPPFLAGS verbatim to neon-config, so
+# that extra libraries/headers which are detected (e.g. OpenSSL) can
+# still be found when building using the --libs/--cflags output of
+# neon-config.
+user_LDFLAGS=$LDFLAGS
+user_CPPFLAGS=$CPPFLAGS
+AC_SUBST(user_LDFLAGS)
+AC_SUBST(user_CPPFLAGS)
+
+# Always defined
+AC_DEFINE([_GNU_SOURCE], 1, [Unconditionally define _GNU_SOURCE])
+# Defined when neon is built as library
+AC_DEFINE(NEON_IS_LIBRARY, 1, [Define when building neon as a library])
+
+AC_PROG_INSTALL
+
+AC_DISABLE_SHARED
+AC_PROG_LIBTOOL
+
+AC_EXEEXT
+
+top_builddir=`pwd`
+AC_SUBST(top_builddir)
+
+AC_ARG_ENABLE(webdav,
+AC_HELP_STRING([--disable-webdav], [disable WebDAV support]))
+
+if test "$enable_webdav" = "no"; then
+  NEON_WITHOUT_WEBDAV
+else
+  # Yes, we do need an XML parser. The _BUNDLED macros handle
+  # this normally.
+  NEON_NEED_XML_PARSER=yes
+fi
+
+# The bundled macros also set this, which makes sure we recurse
+# into the 'src' directory.
+NEON_BUILD_BUNDLED=yes
+AC_SUBST(NEON_BUILD_BUNDLED)
+
+# Define NEON_VERSION* and make the appropriate substitutions.
+NEON_VERSIONS
+
+# Pass the interface version on to libtool when linking libneon.la
+NEON_LINK_FLAGS="-version-info ${NEON_INTERFACE_VERSION}"
+
+LIBNEON_SOURCE_CHECKS
+
+# Use the libtool-type build.
+NEON_LIBTOOL_BUILD
+# Find an XML parser
+NEON_XML_PARSER
+# Extra checks for debugging, compiler warnings
+NEON_DEBUG
+# Checks to compile test suite
+NEON_TEST
+# Leave till last to prevent CFLAGS affecting checks.
+NEON_WARNINGS
+
+CFLAGS="$CFLAGS -I\${top_builddir}"
+
+dnl Substitute NEON_VERSION for neon-config too.
+AC_SUBST(NEON_VERSION)
+
+# Enable tests for optional features
+TESTS="\$(BASIC_TESTS)"
+HELPERS=""
+if test "$NEON_SUPPORTS_SSL" = "yes"; then
+   # Only enable SSL tests if an openssl binary is found (needed to make
+   # certs etc).
+   AC_CHECK_PROG(OPENSSL, openssl, yes, no)
+   if test "$OPENSSL" = "yes"; then
+     TESTS="$TESTS \$(SSL_TESTS)"
+     HELPERS="$HELPERS \$(SSL_HELPERS)"
+   else
+     AC_MSG_WARN([no openssl binary in \$PATH: SSL tests disabled])
+   fi
+fi
+if test "$NEON_SUPPORTS_DAV" = "yes"; then
+   TESTS="$TESTS \$(DAV_TESTS)"
+fi
+if test "$NEON_SUPPORTS_ZLIB" = "yes"; then
+   TESTS="$TESTS \$(ZLIB_TESTS)"
+   HELPERS="$HELPERS \$(ZLIB_HELPERS)"
+fi
+AC_SUBST(HELPERS)
+AC_SUBST(TESTS)
+
+AC_CONFIG_FILES([neon-config], [chmod +x neon-config])
+
+AC_OUTPUT([Makefile src/Makefile test/Makefile])
+
+for d in test/common; do
+    test -d test/common || mkdir test/common
+done
+
+cat <<EOF
+
+Configuration for building neon ${NEON_VERSION}:
+
+  Install prefix:  ${prefix}
+  Compiler:        ${CC}
+  XML Parser:      ${neon_xml_parser_message}
+  SSL library:     ${neon_ssl_message}
+  zlib support:    ${neon_zlib_message}
+  Build libraries: Shared=${enable_shared}, Static=${enable_static}
+ 
+Now run 'make' to compile the neon library.
+
+EOF

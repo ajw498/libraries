@@ -1,0 +1,139 @@
+# Copyright (C) 2001-2002 Joe Orton <joe@manyfish.co.uk>
+# Copyright (C) 1994, 1995-8, 1999, 2000 Free Software Foundation, Inc.
+# This Makefile.in is free software; the Free Software Foundation
+# gives unlimited permission to copy and/or distribute it,
+# with or without modifications, as long as this notice is preserved.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY, to the extent permitted by law; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE.
+
+# libtool bits mostly stolen from libxml and libtool/demo
+
+SHELL = @SHELL@
+
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+bindir = @bindir@
+libdir = @libdir@
+mandir = @mandir@
+man1dir = $(mandir)/man1
+man3dir = $(mandir)/man3
+datadir = $(prefix)/share
+docdir = $(datadir)/doc/neon-@NEON_VERSION@
+includedir = @includedir@
+neonincludes = $(includedir)/neon
+
+top_srcdir = @top_srcdir@
+top_builddir = .
+srcdir = @srcdir@
+VPATH = @srcdir@
+
+@SET_MAKE@
+
+LDFLAGS = -L. @LDFLAGS@
+LIBS = @LIBS@
+CC = @CC@
+INSTALL_PROGRAM = @INSTALL_PROGRAM@
+INSTALL_DATA = @INSTALL_DATA@
+INSTALL_SCRIPT = @INSTALL_SCRIPT@
+INSTALL = @INSTALL@
+transform = @program_transform_name@
+
+LIBTOOL = @LIBTOOL@
+
+# The headers to distribute - making up the public interface of neon
+DIST_HEADERS = ne_request.h ne_session.h ne_utils.h ne_uri.h ne_socket.h  \
+	ne_basic.h ne_207.h ne_props.h ne_xml.h ne_dates.h ne_string.h	  \
+	ne_cookies.h ne_defs.h ne_locks.h ne_alloc.h ne_md5.h ne_i18n.h \
+	ne_redirect.h ne_auth.h ne_compress.h ne_acl.h
+
+all: subdirs
+
+check: subdirs
+	cd test && $(MAKE) check
+
+subdirs:
+	cd src && $(MAKE)
+	@echo
+	@echo "  Compilation complete. Run '$(MAKE) install' (as root?) to install neon."
+	@echo
+
+# Uses Tim Waugh's excellent "xmlto" utility, see
+# http://cyberelk.net/tim/xmlto/.  (The docs target is executed at release
+# time before generating a .tar.gz)
+docs: docs-man docs-html
+
+docs-man:
+	rm -rf doc/man; mkdir doc/man
+	xmlto -o `pwd`/doc/man man doc/manual.xml
+
+docs-pdf:
+	xmlto -o `pwd`/doc pdf doc/manual.xml
+
+docs-ps:
+	xmlto -o `pwd`/doc ps doc/manual.xml
+
+docs-html:
+	test -d doc/html && rm -rf doc/html || true
+	mkdir doc/html
+	xmlto -o `pwd`/doc/html -x doc/html.xsl html doc/manual.xml
+
+# Validate the manual source
+docs-valid:
+	xmllint --noout --valid doc/manual.xml
+
+clean:
+	cd src && $(MAKE) clean
+	cd test && $(MAKE) clean
+
+distclean: clean
+	rm -rf Makefile config.h config.status src/Makefile libtool config.log config.cache neon-config autom4te.cache test/Makefile
+
+again: clean
+
+Makefile: Makefile.in
+	@./config.status Makefile
+
+neon-config: neon-config.in
+	@./config.status neon-config
+
+install-docs: install-man install-html
+
+install-html:
+	$(INSTALL) -d $(DESTDIR)$(docdir)/html
+	for d in $(srcdir)/doc/html/*.html; do \
+		$(INSTALL_DATA) $$d $(DESTDIR)$(docdir)/html; \
+	done
+
+install-man:
+	$(INSTALL) -d $(DESTDIR)$(man3dir)
+	$(INSTALL) -d $(DESTDIR)$(man1dir)
+	for m in $(srcdir)/doc/man/*.3; do \
+	 $(INSTALL_DATA) $$m $(DESTDIR)$(man3dir); done
+	for m in $(srcdir)/doc/man/*.1; do \
+	 $(INSTALL_DATA) $$m $(DESTDIR)$(man1dir); done
+
+install: subdirs install-headers install-lib install-config install-docs
+
+# libtool does all the necessary magic here
+install-lib: src/libneon.la
+	$(INSTALL) -d $(DESTDIR)$(libdir)
+	$(LIBTOOL) --mode=install $(INSTALL) src/libneon.la \
+		$(DESTDIR)$(libdir)/libneon.la
+
+install-headers:
+	$(INSTALL) -d $(DESTDIR)$(neonincludes)
+	@for h in $(DIST_HEADERS); do \
+		echo Installing $$h into $(DESTDIR)$(neonincludes); \
+		$(INSTALL_DATA) $(srcdir)/src/$$h $(DESTDIR)$(neonincludes)/$$h \
+			|| exit 1; \
+	done
+
+install-config: neon-config
+	$(INSTALL) -d $(DESTDIR)$(bindir)
+	@echo Installing neon-config into $(DESTDIR)$(bindir)
+	@$(INSTALL_SCRIPT) neon-config \
+		$(DESTDIR)$(bindir)/`echo neon-config|sed '$(transform)'`
+

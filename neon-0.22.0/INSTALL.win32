@@ -1,0 +1,60 @@
+
+Build neon without SSL
+______________________
+
+To install neon on Windows you need expat-lite already installed on
+your system.  It can be taken from the Apache distribution or
+downloaded from the expat website.  Now simply point make to the expat
+sources:
+
+  nmake /f neon.mak EXPAT_SRC=\path\to\expat-lite
+
+This should work with Microsoft VC++ 5 and 6. 
+
+After compiling the Release subdirectory contains neons.lib, against
+which you can link your program. When you run your program make sure
+the XMLPARSE.DLL from expat is accessable, i.e. is in your PATH.
+
+Build neon with SSL
+___________________
+
+To install neon on Windows you need expat-lite already installed on
+your system.  It can be taken from the Apache distribution or
+downloaded from the expat website.  Additionally, you need openssl
+already installed on your system (I used openssl 0.9.6a).  It can be
+downloaded from "http://www.openssl.org/source/openssl-0.9.6a.tar.gz".
+Now simply point make to the expat sources and ssl sources:
+
+  nmake /f neon.mak EXPAT_SRC=\path\to\expat-lite OPENSSL_SRC=\path\to\openssl
+
+This should work with Microsoft VC++ 5 and 6.
+
+NOTE: The include files for openssl reside in inc32/ directory
+("../openssl-0.9.6a/inc32")+ After compiling the Release subdirectory
+contains neons.lib, against which you can link your program. When you
+run your program make sure the XMLPARSE.DLL from expat is accessable,
+i.e. is in your PATH.
+
+NOTE: Make sure that your programm is linked against libeay32.lib and
+ssleay32.lib (normally in "../openssl-0.9.6a/out32dll") and that
+libeay32.dll and ssleay32.dll is accessable, i.e. is in your PATH.
+
+Build neon with static linked OpenSSL
+_____________________________________
+
+Set the OPENSSL_STATIC parameter
+
+  nmake /f neon.mak EXPAT_SRC=\path\to\expat-lite OPENSSL_SRC=\path\to\openssl OPENSSL_STATIC=1
+
+
+Build neon without WebDAV support
+_________________________________
+
+Set the NODAV parameter
+
+  nmake /f neon.mak NODAV=1
+
+or with static OpenSSL
+
+  nmake /f neon.mak NODAV=1 OPENSSL_SRC=\path\to\openssl OPENSSL_STATIC=1
+
