@@ -62,6 +62,12 @@
 #include "apr_hash.h"
 #include "apr_thread_rwlock.h"
 
+#ifdef HAVE_UTIME_H
+#include <utime.h>
+#endif
+
+/*#define APR_HAS_PSA*/
+
 static apr_filetype_e filetype_from_mode(mode_t mode)
 {
     apr_filetype_e type = APR_NOFILE;
@@ -150,6 +156,11 @@ APR_DECLARE(apr_status_t) apr_file_attrs_set(const char *fname,
     apr_status_t status;
     apr_finfo_t finfo;
 
+    /* Don't do anything if we can't handle the requested attributes */
+    if (!(attr_mask & (APR_FILE_ATTR_READONLY
+                       | APR_FILE_ATTR_EXECUTABLE)))
+        return APR_SUCCESS;
+
     status = apr_stat(&finfo, fname, APR_FINFO_PROT, pool);
     if (!APR_STATUS_IS_SUCCESS(status))
         return status;
@@ -192,6 +203,7 @@ APR_DECLARE(apr_status_t) apr_file_attrs_set(const char *fname,
     return apr_file_perms_set(fname, finfo.protection);
 }
 
+#ifndef APR_HAS_PSA
 static apr_status_t stat_cache_cleanup(void *data)
 {
     apr_pool_t *p = (apr_pool_t *)getGlobalPool();
@@ -270,7 +282,16 @@ int cstat (NXPathCtx_t ctx, char *path, struct stat *buf, unsigned long requestm
             if (ptr[1] != '\0') {
                 ptr++;
             }
-            pinfo = apr_pstrdup (p, ptr);
+            /* If the path ended in a trailing slash then our result path
+               will be a single slash. To avoid stat'ing the root with a
+               slash, we need to make sure we stat the current directory
+               with a dot */
+            if (((*ptr == '/') || (*ptr == '\\')) && (*(ptr+1) == '\0')) {
+                pinfo = apr_pstrdup (p, ".");
+            }
+            else {
+                pinfo = apr_pstrdup (p, ptr);
+            }
         }
     
         /* If we have a statCache then try to pull the information
@@ -297,7 +318,7 @@ int cstat (NXPathCtx_t ctx, char *path, struct stat *buf, unsigned long requestm
     }
     return getstat(ctx, path, buf, requestmap);
 }
-
+#endif
 
 APR_DECLARE(apr_status_t) apr_stat(apr_finfo_t *finfo, 
                                    const char *fname, 
@@ -308,7 +329,11 @@ APR_DECLARE(apr_status_t) apr_stat(apr_finfo_t *finfo,
     NXPathCtx_t pathCtx = 0;
 
     getcwdpath(NULL, &pathCtx, CTX_ACTUAL_CWD);
+#ifdef APR_HAS_PSA
+	srv = getstat(pathCtx, (char*)fname, &info, ST_STAT_BITS|ST_NAME_BIT);
+#else
     srv = cstat(pathCtx, (char*)fname, &info, ST_STAT_BITS|ST_NAME_BIT, pool);
+#endif
     errno = srv;
 
     if (srv == 0) {
@@ -358,11 +383,45 @@ APR_DECLARE(apr_status_t) apr_stat(apr_finfo_t *finfo,
     }
 }
 
-/* Perhaps this becomes nothing but a macro?
- */
-APR_DECLARE(apr_status_t) apr_lstat(apr_finfo_t *finfo, const char *fname,
-                      apr_int32_t wanted, apr_pool_t *pool)
+APR_DECLARE(apr_status_t) apr_file_mtime_set(const char *fname,
+                                              apr_time_t mtime,
+                                              apr_pool_t *pool)
 {
-    return apr_stat(finfo, fname, wanted | APR_FINFO_LINK, pool);
-}
+    apr_status_t status;
+    apr_finfo_t finfo;
 
+    status = apr_stat(&finfo, fname, APR_FINFO_ATIME, pool);
+    if (!APR_STATUS_IS_SUCCESS(status)) {
+        return status;
+    }
+
+#ifdef HAVE_UTIMES
+    {
+      struct timeval tvp[2];
+    
+      tvp[0].tv_sec = apr_time_sec(finfo.atime);
+      tvp[0].tv_usec = apr_time_usec(finfo.atime);
+      tvp[1].tv_sec = apr_time_sec(mtime);
+      tvp[1].tv_usec = apr_time_usec(mtime);
+      
+      if (utimes(fname, tvp) == -1) {
+        return errno;
+      }
+    }
+#elif defined(HAVE_UTIME)
+    {
+      struct utimbuf buf;
+      
+      buf.actime = (time_t) (finfo.atime / APR_USEC_PER_SEC);
+      buf.modtime = (time_t) (mtime / APR_USEC_PER_SEC);
+      
+      if (utime(fname, &buf) == -1) {
+        return errno;
+      }
+    }
+#else
+    return APR_ENOTIMPL;
+#endif
+
+    return APR_SUCCESS;
+}

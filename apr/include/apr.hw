@@ -171,6 +171,7 @@
 #define APR_HAVE_SYS_SENDFILE_H 0
 #define APR_HAVE_SYS_SIGNAL_H   0
 #define APR_HAVE_SYS_SOCKET_H   0
+#define APR_HAVE_SYS_SOCKIO_H   0
 #define APR_HAVE_SYS_SYSLIMITS_H 0
 #define APR_HAVE_SYS_TIME_H     0
 #define APR_HAVE_SYS_TYPES_H    1
@@ -333,14 +334,17 @@ extern "C" {
  */
 #define APR_FILES_AS_SOCKETS      0
 
-/* Not all platforms have a real INADDR_NONE.  This macro replaces INADDR_NONE
- * on all platforms.
- */
-#define APR_INADDR_NONE           INADDR_NONE
-
 /* This macro indicates whether or not EBCDIC is the native character set.
  */
 #define APR_CHARSET_EBCDIC        0
+
+/* Is the TCP_NODELAY socket option inherited from listening sockets?
+ */
+#define APR_TCP_NODELAY_INHERITED 1
+
+/* Is the O_NONBLOCK flag inherited from listening sockets?
+ */
+#define APR_O_NONBLOCK_INHERITED  1
 
 /* Typedefs that APR needs. */
 
@@ -492,9 +496,8 @@ typedef  int         gid_t;
 #define APR_PID_T_FMT            "d"
 
 #define APR_INT64_T_FMT          "I64d"
-#define APR_INT64_T_FMT_LEN      4
 #define APR_UINT64_T_FMT         "I64u"
-#define APR_UINT64_T_FMT_LEN     4
+#define APR_UINT64_T_HEX_FMT     "I64x"
 
 /* Deal with atoi64 variables ... these should move to apr_private.h */
 /* MSVC 7.0 introduced _strtoui64 */

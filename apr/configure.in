@@ -129,6 +129,9 @@ dnl prep libtool
 dnl
 echo "performing libtool configuration..."
 
+AC_ARG_ENABLE(experimental-libtool,[  --experimental-libtool Use experimental custom libtool (not included in source distribution)],
+  [experimental_libtool=$enableval],[experimental_libtool=no])
+
 case $host in
 *os2*)
     # Use a custom-made libtool replacement
@@ -136,15 +139,27 @@ case $host in
     LIBTOOL="$srcdir/build/aplibtool"
     gcc $CFLAGS $CPPFLAGS -o $LIBTOOL.exe $LIBTOOL.c
     ;;
-*)  dnl libtoolize requires that the following not be indented
-AC_PROG_LIBTOOL
+*)
     if test "x$LTFLAGS" = "x"; then
         LTFLAGS='--silent'
     fi
-    # get libtool's setting of shlibpath_var
-    eval `grep "^shlibpath_var=[[A-Z_]]*$" $apr_builddir/libtool`
-    if test "x$shlibpath_var" = "x"; then
-        shlibpath_var=REPLACE_WITH_YOUR_SHLIBPATH_VAR
+    if test "$experimental_libtool" = "yes"; then
+        # Use a custom-made libtool replacement
+        echo "using jlibtool"
+        LIBTOOL="$apr_builddir/libtool"
+        LIBTOOL_SRC="$apr_srcdir/build/jlibtool.c"
+        if test ! -f $LIBTOOL_SRC; then
+          AC_MSG_ERROR([Experimental libtool source not found.  It is not included with APR by default.])
+        fi
+        $CC $CFLAGS $CPPFLAGS -o $LIBTOOL $LIBTOOL_SRC
+    else
+    dnl libtoolize requires that the following not be indented
+AC_PROG_LIBTOOL
+        # get libtool's setting of shlibpath_var
+        eval `grep "^shlibpath_var=[[A-Z_]]*$" $apr_builddir/libtool`
+        if test "x$shlibpath_var" = "x"; then
+            shlibpath_var=REPLACE_WITH_YOUR_SHLIBPATH_VAR
+        fi
     fi
     ;;
 esac
@@ -171,12 +186,7 @@ else
       export_lib_target=''
 fi
 
-# On AIX, libraries need to be specified on the link of lib_target
-lib_target_libs=""
 case $host in
-    *aix*)
-        lib_target_libs="\$(EXTRA_LIBS)";
-        ;;
     *-solaris2*)
         apr_platform_runtime_link_flag="-R"
         ;;
@@ -192,7 +202,6 @@ AC_SUBST(export_lib_target)
 AC_SUBST(shlibpath_var)
 AC_SUBST(LTFLAGS)
 AC_SUBST(LT_LDFLAGS)
-AC_SUBST(lib_target_libs)
 
 dnl ----------------------------- Checks for compiler flags
 nl='
@@ -226,7 +235,7 @@ AC_ARG_ENABLE(maintainer-mode,[  --enable-maintainer-mode  Turn on debugging and
    if test "$GCC" = "yes"; then
      APR_ADDTO(CFLAGS,[-Wall -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations])
    elif test "$AIX_XLC" = "yes"; then
-     APR_ADDTO(CFLAGS,-qfullpath -qinitauto=FE -qcheck=all)
+     APR_ADDTO(CFLAGS,-qfullpath -qinitauto=FE -qcheck=all -qinfo=pro)
    fi
 ])dnl
 
@@ -314,7 +323,11 @@ fi
 # combinations
 case "$host:$CC" in
     *-hp-hpux*:cc )
-	APR_ADDTO(CFLAGS,[-Ae +DAportable +Z])
+	APR_ADDTO(CFLAGS,[-Ae +Z])
+	if echo "$CFLAGS " | grep '+DA' >/dev/null; then :
+	else
+	  APR_ADDTO(CFLAGS,[+DAportable])
+	fi 
 	;;
     powerpc-*-beos:mwcc* )
 	APR_SETVAR(CPP,[mwcc -E])
@@ -393,46 +406,6 @@ case $host in
        enable_threads="no"
        eolstr="\\n"
        ;;
-   *sun*)
-       case $host_cpu in
-         *sparc*)
-            OSDIR="solaris_sparc"
-            eolstr="\\n"
-            if test "$nonportable_atomics_enabled" = 1; then
-              apr_atomic_sparc_compile=apr_atomic_sparc.lo
-              sparc_arch=`uname -m`
-              is_gnu_as=`${AS} --help 2>/dev/null | grep gnu.org`
-              case "$sparc_arch" in
-                sun4c|sun4m|sun4d|sun4t|sun4)
-                  apr_force_atomic_generic=1
-                  apr_atomic_sparc_compile=""
-                  ;;
-                *)
-                  if test -n "$is_gnu_as"; then
-                    ASFLAGS="-xarch=v8plus -K PIC"
-                    ASCPPFLAGS="-traditional-cpp -D_ASM -D__STDC__=0"
-                    ASCPP="gcc -E"
-                  else 
-                    ASFLAGS="-K pic -P -D_ASM -D__STDC__=0 -xarch=v8plus"
-                    ASCPPFLAGS=""
-                    ASCPP="cat"
-                  fi
-                  ;;
-                esac
-            else
-              apr_force_atomic_generic=1
-              apr_atomic_sparc_compile=""
-            fi
-            AC_SUBST(ASCPPFLAGS)
-            AC_SUBST(ASFLAGS)
-            AC_SUBST(apr_atomic_sparc_compile)
-            ;;
-         *)
-            OSDIR="unix"
-            eolstr="\\n"
-            ;;
-       esac
-       ;;
    *linux*)
        apr_force_atomic_generic=1
        case $host_cpu in
@@ -471,7 +444,10 @@ case $host in
     *linux*)
         os_version=`uname -r | sed -e 's/\(.\)\.\(.\)\.\(.\).*/\1\2\3/'`
         ;;
-     *)
+    *darwin*)
+        os_version=`uname -r | sed -e 's/\(.\)\.\(.\).*/\1\2/'`
+        ;;
+    *)
         os_version=OS_VERSION_IS_NOT_SET
         ;;
 esac
@@ -481,7 +457,6 @@ dnl Note: Autoconf will always append LIBS with an extra " " in AC_CHECK_LIB.
 dnl It should check for LIBS being empty and set LIBS equal to the new value 
 dnl without the extra " " in that case, but they didn't do that.  So, we
 dnl end up LIBS="-lm -lcrypt -lnsl  -ldl" which is an annoyance.
-AC_CHECK_LIB(resolv, res_init)
 AC_CHECK_LIB(nsl, gethostbyname)
 AC_SEARCH_LIBS(gethostname, nsl)
 AC_CHECK_LIB(socket, socket)
@@ -594,12 +569,6 @@ if test "$threads" = "1"; then
                   [Define if gethostbyaddr is thread safe])
     fi
     AC_CHECK_FUNCS(gethostbyname_r gethostbyaddr_r)
-
-    case "$host" in
-    *-ibm-aix*)
-        APR_ADDTO(CPPFLAGS, [-D_THREAD_SAFE])
-        ;;
-    esac
 else
     echo "APR will be non-threaded"
 fi
@@ -626,15 +595,19 @@ AC_CHECK_FUNCS([getpwnam_r getpwuid_r getgrnam_r getgrgid_r])
 dnl ----------------------------- Checking for Shared Memory Support 
 echo "${nl}Checking for Shared Memory Support..."
 
-# The POSIX function are in librt on Solaris. This will
-# also help us find sem_open when doing locking below
+# The real-time POSIX extensions (e.g. shm_*, sem_*) may only
+# be available if linking against librt.
+AC_SEARCH_LIBS(shm_open, rt)
+
 case $host in
-   *-solaris*)
-       AC_CHECK_LIB(rt, shm_open)
-       ;;
+ *-sysv*)
+   ac_includes_default="$ac_includes_default
+#if HAVE_SYS_MUTEX_H /* needed to define lock_t for sys/shm.h */
+# include <sys/mutex.h>
+#endif";;
 esac
 
-AC_CHECK_HEADERS([sys/mman.h sys/ipc.h sys/shm.h sys/file.h kernel/OS.h os2.h])
+AC_CHECK_HEADERS([sys/mman.h sys/ipc.h sys/mutex.h sys/shm.h sys/file.h kernel/OS.h os2.h])
 AC_CHECK_FUNCS([mmap munmap shm_open shm_unlink shmget shmat shmdt shmctl \
                 create_area])
 APR_CHECK_DEFINE(MAP_ANON, sys/mman.h)
@@ -830,6 +803,7 @@ AC_CHECK_FUNCS(writev)
 sendfile="0"
 AC_CHECK_LIB(sendfile, sendfilev)
 AC_CHECK_FUNCS(sendfile send_file sendfilev, [ sendfile="1" ])
+AC_CHECK_FUNCS(utime utimes)
 
 dnl THIS MUST COME AFTER THE THREAD TESTS - FreeBSD doesn't always have a
 dnl threaded poll() and we don't want to use sendfile on early FreeBSD 
@@ -891,7 +865,7 @@ if test "$native_mmap_emul" = "1"; then
     mmap="1"
 fi
 AC_CHECK_FUNCS(memmove, [ have_memmove="1" ], [have_memmove="0" ])
-AC_CHECK_FUNCS([getpass getpassphrase gmtime_r localtime_r hstrerror mkstemp])
+AC_CHECK_FUNCS([getpass getpassphrase gmtime_r localtime_r mkstemp])
 
 AC_SUBST(fork)
 AC_SUBST(have_inet_addr)
@@ -957,6 +931,7 @@ APR_FLAG_HEADERS(
     netinet/sctp.h      \
     netinet/sctp_uio.h  \
     sys/file.h		\
+    sys/ioctl.h         \
     sys/mman.h		\
     sys/poll.h		\
     sys/resource.h	\
@@ -965,6 +940,7 @@ APR_FLAG_HEADERS(
     sys/sendfile.h	\
     sys/signal.h	\
     sys/socket.h	\
+    sys/sockio.h	\
     sys/stat.h          \
     sys/sysctl.h	\
     sys/syslimits.h	\
@@ -1011,9 +987,11 @@ AC_SUBST(stdioh)
 AC_SUBST(stdlibh)
 AC_SUBST(stringh)
 AC_SUBST(stringsh)
+AC_SUBST(sys_ioctlh)
 AC_SUBST(sys_sendfileh)
 AC_SUBST(sys_signalh)
 AC_SUBST(sys_socketh)
+AC_SUBST(sys_sockioh)
 AC_SUBST(sys_typesh)
 AC_SUBST(sys_timeh)
 AC_SUBST(sys_uioh)
@@ -1046,8 +1024,6 @@ AC_FUNC_SETPGRP
 
 APR_CHECK_SOCKLEN_T
 
-APR_INADDR_NONE
-
 dnl Checks for pointer size
 AC_CHECK_SIZEOF(void*, 4)
 
@@ -1076,18 +1052,16 @@ fi
 if test "$ac_cv_sizeof_int" = "8"; then
     int64_literal='#define APR_INT64_C(val) (val)'
     int64_t_fmt='#define APR_INT64_T_FMT "d"'
-    int64_t_fmt_len='#define APR_INT64_T_FMT_LEN 1'
     uint64_t_fmt='#define APR_UINT64_T_FMT "u"'
-    uint64_t_fmt_len='#define APR_UINT64_T_FMT_LEN 1'
+    uint64_t_hex_fmt='#define APR_UINT64_T_HEX_FMT "x"'
     int64_value="int"
     long_value=int
     int64_strfn="strtoi"
 elif test "$ac_cv_sizeof_long" = "8"; then
     int64_literal='#define APR_INT64_C(val) (val##L)'
     int64_t_fmt='#define APR_INT64_T_FMT "ld"'
-    int64_t_fmt_len='#define APR_INT64_T_FMT_LEN 2'
     uint64_t_fmt='#define APR_UINT64_T_FMT "lu"'
-    uint64_t_fmt_len='#define APR_UINT64_T_FMT_LEN 2'
+    uint64_t_hex_fmt='#define APR_UINT64_T_HEX_FMT "lx"'
     int64_value="long"
     long_value=long
     int64_strfn="strtol"
@@ -1098,38 +1072,31 @@ elif test "$ac_cv_sizeof_long_long" = "8"; then
     # doesn't support 'q'.  Solaris wins.  Exceptions can
     # go to the OS-dependent section.
     int64_t_fmt='#define APR_INT64_T_FMT "lld"'
-    int64_t_fmt_len='#define APR_INT64_T_FMT_LEN 3'
     uint64_t_fmt='#define APR_UINT64_T_FMT "llu"'
-    uint64_t_fmt_len='#define APR_UINT64_T_FMT_LEN 3'
+    uint64_t_hex_fmt='#define APR_UINT64_T_HEX_FMT "llx"'
     int64_value="long long"
     long_value="long long"
     int64_strfn="strtoll"
 elif test "$ac_cv_sizeof_long_double" = "8"; then
     int64_literal='#define APR_INT64_C(val) (val##LD)'
     int64_t_fmt='#define APR_INT64_T_FMT "Ld"'
-    int64_t_fmt_len='#define APR_INT64_T_FMT_LEN 2'
     uint64_t_fmt='#define APR_UINT64_T_FMT "Lu"'
-    uint64_t_fmt_len='#define APR_UINT64_T_FMT_LEN 2'
+    uint64_t_hex_fmt='#define APR_UINT64_T_HEX_FMT "Lx"'
     int64_value="long double"
     long_value="long double"
     int64_strfn="strtoll"
 elif test "$ac_cv_sizeof_longlong" = "8"; then
     int64_literal='#define APR_INT64_C(val) (val##LL)'
     int64_t_fmt='#define APR_INT64_T_FMT "qd"'
-    int64_t_fmt_len='#define APR_INT64_T_FMT_LEN 2'
     uint64_t_fmt='#define APR_UINT64_T_FMT "qu"'
-    uint64_t_fmt_len='#define APR_UINT64_T_FMT_LEN 2'
+    uint64_t_hex_fmt='#define APR_UINT64_T_HEX_FMT "qx"'
     int64_value="__int64"
     long_value="__int64"
     int64_strfn="strtoll"
 else
     # int64_literal may be overriden if your compiler thinks you have
     # a 64-bit value but APR does not agree.
-    int64_literal='#error Can not determine the proper size for apr_int64_t'
-    int64_t_fmt='#error Can not determine the proper size for apr_int64_t'
-    int64_t_fmt_len='#error Can not determine the proper size for apr_int64_t'
-    uint64_t_fmt='#error Can not determine the proper size for apr_int64_t'
-    uint64_t_fmt_len='#error Can not determine the proper size for apr_int64_t'
+    AC_ERROR([could not detect a 64-bit integer type])
 fi
 
 # If present, allow the C99 macro INT64_C to override our conversion.
@@ -1267,9 +1234,8 @@ AC_SUBST(size_t_value)
 AC_SUBST(ssize_t_value)
 AC_SUBST(socklen_t_value)
 AC_SUBST(int64_t_fmt) 
-AC_SUBST(int64_t_fmt_len) 
 AC_SUBST(uint64_t_fmt) 
-AC_SUBST(uint64_t_fmt_len) 
+AC_SUBST(uint64_t_hex_fmt) 
 AC_SUBST(ssize_t_fmt) 
 AC_SUBST(size_t_fmt)
 AC_SUBST(off_t_fmt) 
@@ -1741,8 +1707,6 @@ fi
 AC_SUBST(have_in_addr)
 AC_SUBST(file_as_socket)
 
-APR_CHECK_SOCKADDR_SA_LEN
-
 # Check the types only if we have gethostbyname_r
 if test "$ac_cv_func_gethostbyname_r" = "yes"; then
     APR_CHECK_GETHOSTBYNAME_R_STYLE
@@ -1796,7 +1760,6 @@ AC_SUBST(acceptfilter)
 AC_SUBST(have_sctp)
 
 AC_CHECK_FUNCS(set_h_errno)
-APR_CHECK_RESOLV_RETRANS
 
 echo "${nl}Checking for IPv6 Networking support..."
 dnl Start of checking for IPv6 support...
@@ -1809,51 +1772,57 @@ AC_ARG_ENABLE(ipv6,
   [ user_disabled_ipv6=0 ] )
 
 case $host in
-  *apple-darwin*)
-    # It appears that Jaguar has all the right features, but
-    # getnameinfo() fails to find the hostname for a mapped
-    # address.
-    broken_ipv6=1
-    ;;
   *)
     broken_ipv6=0
 esac
 
-AC_SEARCH_LIBS(getaddrinfo, inet6)
-AC_SEARCH_LIBS(gai_strerror, inet6)
-AC_SEARCH_LIBS(getnameinfo, inet6)
+AC_SEARCH_LIBS(getaddrinfo, socket inet6)
+AC_SEARCH_LIBS(gai_strerror, socket inet6)
+AC_SEARCH_LIBS(getnameinfo, socket inet6)
 AC_CHECK_FUNCS(gai_strerror)
 APR_CHECK_WORKING_GETADDRINFO
 APR_CHECK_NEGATIVE_EAI
 APR_CHECK_WORKING_GETNAMEINFO
 APR_CHECK_SOCKADDR_IN6
+APR_CHECK_SOCKADDR_STORAGE
 
-AC_MSG_CHECKING(if APR supports IPv6)
 have_ipv6="0"
 if test "$user_disabled_ipv6" = 1; then
-    AC_MSG_RESULT([no -- disabled by user])
+    ipv6_result="no -- disabled by user"
 else
     if test "x$broken_ipv6" = "x0"; then
         if test "x$have_sockaddr_in6" = "x1"; then
             if test "x$ac_cv_working_getaddrinfo" = "xyes"; then
                 if test "x$ac_cv_working_getnameinfo" = "xyes"; then
+                    APR_CHECK_GETNAMEINFO_IPV4_MAPPED
+                    APR_CHECK_GETADDRINFO_ADDRCONFIG
                     have_ipv6="1"
-                    AC_MSG_RESULT([yes])
+                    ipv6_result="yes"
                 else
-                    AC_MSG_RESULT([no -- no getnameinfo])
+                    ipv6_result="no -- no getnameinfo"
                 fi
             else
-                AC_MSG_RESULT([no -- no working getaddrinfo])
+                ipv6_result="no -- no working getaddrinfo"
             fi
         else
-            AC_MSG_RESULT([no -- no sockaddr_in6])
+            ipv6_result="no -- no sockaddr_in6"
         fi
     else
-        AC_MSG_RESULT([no -- the platform has problems supporting IPv6])
+        ipv6_result="no -- the platform has known problems supporting IPv6"
     fi
 fi
 
+AC_MSG_CHECKING(if APR supports IPv6)
+AC_MSG_RESULT($ipv6_result)
+
 AC_SUBST(have_ipv6)
+
+# hstrerror is only needed if IPv6 is not enabled,
+# so getaddrinfo/gai_strerror are not used.
+if test $have_ipv6 = 0; then
+  AC_SEARCH_LIBS(hstrerror, resolv,
+    [AC_DEFINE(HAVE_HSTRERROR, 1, [Define if hstrerror is present])])
+fi
 
 dnl Check for langinfo support
 

@@ -61,9 +61,7 @@
  * You must modify apr.h.in instead.
  *
  * And please, make an effort to stub apr.hw and apr.hnw in the process.
- *
- * This is the Win32 specific version of apr.h.  It is copied from
- * apr.hw when building the apr.dsp or libapr.dsp project. */
+ */
 
 /**
  * @file apr.h
@@ -129,9 +127,11 @@
 #define APR_HAVE_STDLIB_H        @stdlibh@
 #define APR_HAVE_STRING_H        @stringh@
 #define APR_HAVE_STRINGS_H       @stringsh@
+#define APR_HAVE_SYS_IOCTL_H     @sys_ioctlh@
 #define APR_HAVE_SYS_SENDFILE_H  @sys_sendfileh@
 #define APR_HAVE_SYS_SIGNAL_H    @sys_signalh@
 #define APR_HAVE_SYS_SOCKET_H    @sys_socketh@
+#define APR_HAVE_SYS_SOCKIO_H    @sys_sockioh@
 #define APR_HAVE_SYS_SYSLIMITS_H @sys_syslimitsh@
 #define APR_HAVE_SYS_TIME_H      @sys_timeh@
 #define APR_HAVE_SYS_TYPES_H     @sys_typesh@
@@ -232,6 +232,7 @@ extern "C" {
 #define APR_HAVE_SIGACTION      @have_sigaction@
 #define APR_HAVE_SIGSUSPEND     @have_sigsuspend@
 #define APR_HAVE_SIGWAIT        @have_sigwait@
+#define APR_HAVE_SA_STORAGE     @have_sa_storage@
 #define APR_HAVE_STRCASECMP     @have_strcasecmp@
 #define APR_HAVE_STRDUP         @have_strdup@
 #define APR_HAVE_STRICMP        @have_stricmp@
@@ -266,11 +267,6 @@ extern "C" {
  * then pass the socket representation to apr_poll_socket_add().
  */
 #define APR_FILES_AS_SOCKETS      @file_as_socket@
-
-/* Not all platforms have a real INADDR_NONE.  This macro replaces INADDR_NONE
- * on all platforms.
- */
-#define APR_INADDR_NONE           @apr_inaddr_none@
 
 /* This macro indicates whether or not EBCDIC is the native character set.
  */
@@ -390,11 +386,12 @@ typedef  @socklen_t_value@       apr_socklen_t;
 
 /* And APR_INT64_T_FMT */
 @int64_t_fmt@
-@int64_t_fmt_len@
 
 /* And APR_UINT64_T_FMT */
 @uint64_t_fmt@
-@uint64_t_fmt_len@
+
+/* And APR_UINT64_T_HEX_FMT */
+@uint64_t_hex_fmt@
 
 /* Deal with atoi64 variables ... these should move to apr_private.h */
 #define APR_HAVE_INT64_STRFN  @have_int64_strfn@

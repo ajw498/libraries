@@ -62,6 +62,7 @@
 #include "apr_lib.h"
 #include "apr_strings.h"
 #include "apr_network_io.h"
+#include "apr_portable.h"
 #include <math.h>
 #if APR_HAVE_CTYPE_H
 #include <ctype.h>
@@ -534,6 +535,30 @@ static char *conv_apr_sockaddr(apr_sockaddr_t *sa, char *buf_end, int *len)
 
 
 
+#if APR_HAS_THREADS
+static char *conv_os_thread_t(apr_os_thread_t *tid, char *buf_end, int *len)
+{
+    union {
+        apr_os_thread_t tid;
+        apr_uint64_t alignme;
+    } u;
+    int is_negative;
+
+    u.tid = *tid;
+    switch(sizeof(u.tid)) {
+    case sizeof(apr_int32_t):
+        return conv_10(*(apr_uint32_t *)&u.tid, TRUE, &is_negative, buf_end, len);
+    case sizeof(apr_int64_t):
+        return conv_10_quad(*(apr_uint64_t *)&u.tid, TRUE, &is_negative, buf_end, len);
+    default:
+        /* not implemented; stick 0 in the buffer */
+        return conv_10(0, TRUE, &is_negative, buf_end, len);
+    }
+}
+#endif
+
+
+
 /*
  * Convert a floating point number to a string formats 'f', 'e' or 'E'.
  * The result is placed in buf, and len denotes the length of the string
@@ -813,17 +838,17 @@ APR_DECLARE(int) apr_vformatter(int (*flush_func)(apr_vformatter_buff_t *),
                 adjust_precision = adjust_width = NO;
 
             /*
-             * Modifier check
+             * Modifier check.  Note that if APR_INT64_T_FMT is "d",
+             * the first if condition is never true.
              */
-#if defined(APR_INT64_T_FMT_LEN) && (APR_INT64_T_FMT_LEN == 3)
-            if ((*fmt == APR_INT64_T_FMT[0]) &&
-                (fmt[1] == APR_INT64_T_FMT[1])) {
-#elif defined(APR_INT64_T_FMT_LEN) && (APR_INT64_T_FMT_LEN == 2)
-            if (*fmt == APR_INT64_T_FMT[0]) {
-#else
-            if (strncmp(fmt, APR_INT64_T_FMT, 
-                             sizeof(APR_INT64_T_FMT) - 2) == 0) {
-#endif
+            if ((sizeof(APR_INT64_T_FMT) == 4 &&
+                 fmt[0] == APR_INT64_T_FMT[0] &&
+                 fmt[1] == APR_INT64_T_FMT[1]) ||
+                (sizeof(APR_INT64_T_FMT) == 3 &&
+                 fmt[0] == APR_INT64_T_FMT[0]) ||
+                (sizeof(APR_INT64_T_FMT) > 4 &&
+                 strncmp(fmt, APR_INT64_T_FMT, 
+                         sizeof(APR_INT64_T_FMT) - 2) == 0)) {
                 /* Need to account for trailing 'd' and null in sizeof() */
                 var_type = IS_QUAD;
                 fmt += (sizeof(APR_INT64_T_FMT) - 2);
@@ -1160,6 +1185,31 @@ APR_DECLARE(int) apr_vformatter(int (*flush_func)(apr_vformatter_buff_t *),
                 }
                 break;
 
+                case 'T':
+#if APR_HAS_THREADS
+                {
+                    apr_os_thread_t *tid;
+
+                    tid = va_arg(ap, apr_os_thread_t *);
+                    if (tid != NULL) {
+                        s = conv_os_thread_t(tid, &num_buf[NUM_BUF_SIZE], &s_len);
+                        if (adjust_precision && precision < s_len)
+                            s_len = precision;
+                    }
+                    else {
+                        s = S_NULL;
+                        s_len = S_NULL_LEN;
+                    }
+                    pad_char = ' ';
+                }
+#else
+                    char_buf[0] = '0';
+                    s = &char_buf[0];
+                    s_len = 1;
+                    pad_char = ' ';
+#endif
+                    break;
+
                 case NUL:
                     /* if %p ends the string, oh well ignore it */
                     continue;
@@ -1168,6 +1218,7 @@ APR_DECLARE(int) apr_vformatter(int (*flush_func)(apr_vformatter_buff_t *),
                     s = "bogus %p";
                     s_len = 8;
                     prefix_char = NUL;
+                    (void)va_arg(ap, void *); /* skip the bogus argument on the stack */
                     break;
                 }
                 break;

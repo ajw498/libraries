@@ -62,6 +62,10 @@ APR_DECLARE(apr_status_t) apr_proc_mutex_destroy(apr_proc_mutex_t *mutex)
     return apr_pool_cleanup_run(mutex->pool, mutex, apr_proc_mutex_cleanup);
 }
 
+static apr_status_t proc_mutex_no_tryacquire(apr_proc_mutex_t *new_mutex)
+{
+    return APR_ENOTIMPL;
+}
 
 #if APR_HAS_POSIXSEM_SERIALIZE
 
@@ -165,10 +169,10 @@ static apr_status_t proc_mutex_posix_release(apr_proc_mutex_t *mutex)
 {
     int rc;
 
+    mutex->curr_locked = 0;
     if ((rc = sem_post((sem_t *)mutex->interproc->filedes)) < 0) {
         return errno;
     }
-    mutex->curr_locked = 0;
     return APR_SUCCESS;
 }
 
@@ -188,7 +192,7 @@ const apr_proc_mutex_unix_lock_methods_t apr_proc_mutex_unix_posix_methods =
 #endif
     proc_mutex_posix_create,
     proc_mutex_posix_acquire,
-    NULL, /* no tryacquire */
+    proc_mutex_no_tryacquire,
     proc_mutex_posix_release,
     proc_mutex_posix_cleanup,
     proc_mutex_posix_child_init,
@@ -269,13 +273,13 @@ static apr_status_t proc_mutex_sysv_release(apr_proc_mutex_t *mutex)
 {
     int rc;
 
+    mutex->curr_locked = 0;
     do {
         rc = semop(mutex->interproc->filedes, &proc_mutex_op_off, 1);
     } while (rc < 0 && errno == EINTR);
     if (rc < 0) {
         return errno;
     }
-    mutex->curr_locked = 0;
     return APR_SUCCESS;
 }
 
@@ -293,7 +297,7 @@ const apr_proc_mutex_unix_lock_methods_t apr_proc_mutex_unix_sysv_methods =
 #endif
     proc_mutex_sysv_create,
     proc_mutex_sysv_acquire,
-    NULL, /* no tryacquire */
+    proc_mutex_no_tryacquire,
     proc_mutex_sysv_release,
     proc_mutex_sysv_cleanup,
     proc_mutex_sysv_child_init,
@@ -434,13 +438,13 @@ static apr_status_t proc_mutex_proc_pthread_release(apr_proc_mutex_t *mutex)
 {
     apr_status_t rv;
 
+    mutex->curr_locked = 0;
     if ((rv = pthread_mutex_unlock(mutex->pthread_interproc))) {
 #ifdef PTHREAD_SETS_ERRNO
         rv = errno;
 #endif
         return rv;
     }
-    mutex->curr_locked = 0;
     return APR_SUCCESS;
 }
 
@@ -456,7 +460,7 @@ const apr_proc_mutex_unix_lock_methods_t apr_proc_mutex_unix_proc_pthread_method
     APR_PROCESS_LOCK_MECH_IS_GLOBAL,
     proc_mutex_proc_pthread_create,
     proc_mutex_proc_pthread_acquire,
-    NULL, /* no tryacquire */
+    proc_mutex_no_tryacquire,
     proc_mutex_proc_pthread_release,
     proc_mutex_proc_pthread_cleanup,
     proc_mutex_proc_pthread_child_init,
@@ -496,8 +500,9 @@ static apr_status_t proc_mutex_fcntl_cleanup(void *mutex_)
         if (status != APR_SUCCESS)
             return status;
     }
-    apr_file_close(mutex->interproc);
-    
+    if (mutex->interproc) { /* if it was opened successfully */
+        apr_file_close(mutex->interproc);
+    }
     return APR_SUCCESS;
 }    
 
@@ -515,7 +520,8 @@ static apr_status_t proc_mutex_fcntl_create(apr_proc_mutex_t *new_mutex,
     }
     else {
         new_mutex->fname = apr_pstrdup(new_mutex->pool, "/tmp/aprXXXXXX");
-        rv = apr_file_mktemp(&new_mutex->interproc, new_mutex->fname, 0,
+        rv = apr_file_mktemp(&new_mutex->interproc, new_mutex->fname,
+                             APR_CREATE | APR_WRITE | APR_EXCL,
                              new_mutex->pool);
     }
  
@@ -525,11 +531,6 @@ static apr_status_t proc_mutex_fcntl_create(apr_proc_mutex_t *new_mutex,
     }
 
     new_mutex->curr_locked = 0;
-    /* XXX currently, apr_file_mktemp() always specifies that the file should
-     *     be removed when closed; that unlink() will fail since we're 
-     *     removing it here; we want to remove it here since we don't need
-     *     it visible and we want it cleaned up if we exit catastrophically
-     */
     unlink(new_mutex->fname);
     apr_pool_cleanup_register(new_mutex->pool,
                               (void*)new_mutex,
@@ -556,13 +557,13 @@ static apr_status_t proc_mutex_fcntl_release(apr_proc_mutex_t *mutex)
 {
     int rc;
 
+    mutex->curr_locked=0;
     do {
         rc = fcntl(mutex->interproc->filedes, F_SETLKW, &proc_mutex_unlock_it);
     } while (rc < 0 && errno == EINTR);
     if (rc < 0) {
         return errno;
     }
-    mutex->curr_locked=0;
     return APR_SUCCESS;
 }
 
@@ -582,7 +583,7 @@ const apr_proc_mutex_unix_lock_methods_t apr_proc_mutex_unix_fcntl_methods =
 #endif
     proc_mutex_fcntl_create,
     proc_mutex_fcntl_acquire,
-    NULL, /* no tryacquire */
+    proc_mutex_no_tryacquire,
     proc_mutex_fcntl_release,
     proc_mutex_fcntl_cleanup,
     proc_mutex_fcntl_child_init,
@@ -609,7 +610,9 @@ static apr_status_t proc_mutex_flock_cleanup(void *mutex_)
         if (status != APR_SUCCESS)
             return status;
     }
-    apr_file_close(mutex->interproc);
+    if (mutex->interproc) { /* if it was opened properly */
+        apr_file_close(mutex->interproc);
+    }
     unlink(mutex->fname);
     return APR_SUCCESS;
 }    
@@ -628,7 +631,8 @@ static apr_status_t proc_mutex_flock_create(apr_proc_mutex_t *new_mutex,
     }
     else {
         new_mutex->fname = apr_pstrdup(new_mutex->pool, "/tmp/aprXXXXXX");
-        rv = apr_file_mktemp(&new_mutex->interproc, new_mutex->fname, 0,
+        rv = apr_file_mktemp(&new_mutex->interproc, new_mutex->fname,
+                             APR_CREATE | APR_WRITE | APR_EXCL,
                              new_mutex->pool);
     }
  
@@ -661,13 +665,13 @@ static apr_status_t proc_mutex_flock_release(apr_proc_mutex_t *mutex)
 {
     int rc;
 
+    mutex->curr_locked = 0;
     do {
         rc = flock(mutex->interproc->filedes, LOCK_UN);
     } while (rc < 0 && errno == EINTR);
     if (rc < 0) {
         return errno;
     }
-    mutex->curr_locked = 0;
     return APR_SUCCESS;
 }
 
@@ -682,6 +686,9 @@ static apr_status_t proc_mutex_flock_child_init(apr_proc_mutex_t **mutex,
 
     memcpy(new_mutex, *mutex, sizeof *new_mutex);
     new_mutex->pool = pool;
+    if (!fname) {
+        fname = (*mutex)->fname;
+    }
     new_mutex->fname = apr_pstrdup(pool, fname);
     rv = apr_file_open(&new_mutex->interproc, new_mutex->fname,
                        APR_WRITE, 0, new_mutex->pool);
@@ -702,7 +709,7 @@ const apr_proc_mutex_unix_lock_methods_t apr_proc_mutex_unix_flock_methods =
 #endif
     proc_mutex_flock_create,
     proc_mutex_flock_acquire,
-    NULL, /* no tryacquire */
+    proc_mutex_no_tryacquire,
     proc_mutex_flock_release,
     proc_mutex_flock_cleanup,
     proc_mutex_flock_child_init,
@@ -872,6 +879,18 @@ APR_DECLARE(apr_status_t) apr_proc_mutex_cleanup(void *mutex)
 APR_DECLARE(const char *) apr_proc_mutex_name(apr_proc_mutex_t *mutex)
 {
     return mutex->meth->name;
+}
+
+APR_DECLARE(const char *) apr_proc_mutex_lockfile(apr_proc_mutex_t *mutex)
+{
+    /* posix sems use the fname field but don't use a file,
+     * so be careful 
+     */
+    if (!strcmp(mutex->meth->name, "flock") ||
+        !strcmp(mutex->meth->name, "fcntl")) {
+        return mutex->fname;
+    }
+    return NULL;
 }
 
 APR_POOL_IMPLEMENT_ACCESSOR(proc_mutex)

@@ -53,7 +53,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib shell32.lib rpcrt4.lib /nologo /base:"0x6EEC0000" /subsystem:windows /dll /incremental:no /debug /machine:I386 /opt:ref
-# ADD LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib shell32.lib rpcrt4.lib /nologo /base:"0x6EEC0000" /subsystem:windows /dll /incremental:no /debug /machine:I386 /opt:ref
+# ADD LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib shell32.lib rpcrt4.lib /nologo /base:"0x6EEC0000" /subsystem:windows /dll /incremental:no /debug /machine:I386 /out:"Release/libapr-1.dll" /opt:ref
 
 !ELSEIF  "$(CFG)" == "libapr - Win32 Debug"
 
@@ -79,7 +79,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib shell32.lib rpcrt4.lib /nologo /base:"0x6EEC0000" /subsystem:windows /dll /incremental:no /debug /machine:I386
-# ADD LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib shell32.lib rpcrt4.lib /nologo /base:"0x6EEC0000" /subsystem:windows /dll /incremental:no /debug /machine:I386
+# ADD LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib shell32.lib rpcrt4.lib /nologo /base:"0x6EEC0000" /subsystem:windows /dll /incremental:no /debug /machine:I386 /out:"Debug/libapr-1.dll"
 
 !ENDIF 
 
@@ -160,6 +160,10 @@ SOURCE=.\file_io\win32\readwrite.c
 # Begin Source File
 
 SOURCE=.\file_io\win32\seek.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\file_io\unix\tempdir.c
 # End Source File
 # End Group
 # Begin Group "locks"
@@ -495,10 +499,6 @@ SOURCE=.\include\apr_allocator.h
 # Begin Source File
 
 SOURCE=.\include\apr_atomic.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\include\apr_compat.h
 # End Source File
 # Begin Source File
 

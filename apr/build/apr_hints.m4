@@ -43,7 +43,7 @@ if test "x$apr_preload_done" != "xyes" ; then
 	APR_SETVAR(SHELL, [/bin/ksh])
 	;;
     *-ibm-aix*)
-	APR_ADDTO(CPPFLAGS, [-U__STR__])
+	APR_ADDTO(CPPFLAGS, [-U__STR__ -D_THREAD_SAFE])
         dnl _USR_IRS gets us the hstrerror() proto in netdb.h
         case $host in
             *-ibm-aix4.3)
@@ -59,7 +59,7 @@ if test "x$apr_preload_done" != "xyes" ; then
         dnl If using xlc, remember it, and give it the right options.
         if $CC 2>&1 | grep 'xlc' > /dev/null; then
           APR_SETIFNULL(AIX_XLC, [yes])
-          APR_ADDTO(CFLAGS, [-qHALT=E -qinfo=pro])
+          APR_ADDTO(CFLAGS, [-qHALT=E])
         fi
 	APR_SETIFNULL(apr_iconv_inbuf_const, [1])
 	APR_SETIFNULL(apr_sysvsem_is_global, [yes])
@@ -226,8 +226,11 @@ dnl	       # Not a problem in 10.20.  Otherwise, who knows?
     TPF)
        APR_ADDTO(CPPFLAGS, [-DTPF -D_POSIX_SOURCE])
        ;;
-    BS2000*-siemens-sysv4*)
-	APR_ADDTO(CPPFLAGS, [-DSVR4 -D_XPG_IV])
+    bs2000*-siemens-sysv*)
+	APR_SETIFNULL(CFLAGS, [-O])
+	APR_ADDTO(CPPFLAGS, [-DSVR4 -D_XPG_IV -D_KMEMUSER])
+	APR_ADDTO(LIBS, [-lsocket])
+	APR_SETIFNULL(enable_threads, [no])
 	;;
     *-siemens-sysv4*)
 	APR_ADDTO(CPPFLAGS, [-DSVR4 -D_XPG_IV -DHAS_DLFCN -DUSE_MMAP_FILES -DUSE_SYSVSEM_SERIALIZED_ACCEPT])
@@ -389,7 +392,7 @@ case "$host" in
   *-apple-aux3*)
       APR_SETIFNULL(CC, [gcc])
       ;;
-  BS2000*-siemens-sysv4*)
+  bs2000*-siemens-sysv*)
       APR_SETIFNULL(CC, [c89 -XLLML -XLLMK -XL -Kno_integer_overflow])
       ;;
   *convex-v11*)

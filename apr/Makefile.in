@@ -34,9 +34,8 @@ TARGETS = delete-lib $(TARGET_LIB) delete-exports export_vars.h apr.exp
 CLEAN_TARGETS = 
 DISTCLEAN_TARGETS = config.cache config.log config.status \
 	include/apr.h include/arch/unix/apr_private.h \
-	libtool apr.exp apr-config
-EXTRACLEAN_TARGETS = configure aclocal.m4 include/arch/unix/apr_private.h.in \
-	exports.c export_vars.h
+	libtool apr.exp apr-config exports.c export_vars.h
+EXTRACLEAN_TARGETS = configure aclocal.m4 include/arch/unix/apr_private.h.in
 
 prefix=@prefix@
 exec_prefix=@exec_prefix@
@@ -101,7 +100,7 @@ install: $(TARGET_LIB)
 
 $(TARGET_LIB):
 	@for i in $(SUBDIRS); do objects="$$objects $$i/*.@so_ext@"; done ; \
-	    tmpcmd="$(LINK) @lib_target@ @lib_target_libs@"; \
+	    tmpcmd="$(LINK) @lib_target@ $(ALL_LIBS)"; \
 	    echo $$tmpcmd; \
 	    $$tmpcmd && touch $@
 

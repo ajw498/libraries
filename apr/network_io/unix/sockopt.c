@@ -55,6 +55,7 @@
 #include "apr_arch_networkio.h"
 #include "apr_strings.h"
 
+
 static apr_status_t soblock(int sd)
 {
 /* BeOS uses setsockopt at present for non blocking... */
@@ -126,6 +127,7 @@ apr_status_t apr_socket_timeout_set(apr_socket_t *sock, apr_interval_time_t t)
             if ((stat = sononblock(sock->socketdes)) != APR_SUCCESS) {
                 return stat;
             }
+            apr_set_option(&sock->netmask, APR_SO_NONBLOCK, 1);
         }
     } 
     else if (t < 0 && sock->timeout >= 0) {
@@ -133,16 +135,17 @@ apr_status_t apr_socket_timeout_set(apr_socket_t *sock, apr_interval_time_t t)
             if ((stat = soblock(sock->socketdes)) != APR_SUCCESS) { 
                 return stat; 
             }
+            apr_set_option(&sock->netmask, APR_SO_NONBLOCK, 0);
         } 
     }
-    /* must disable the incomplete read support if we change to a
-     * blocking socket.
+    /* must disable the incomplete read support if we disable
+     * a timeout
      */
-    if (t == 0) {
+    if (t <= 0) {
         sock->netmask &= ~APR_INCOMPLETE_READ;
     }
     sock->timeout = t; 
-    apr_set_option(&sock->netmask, APR_SO_TIMEOUT, t);
+    apr_set_option(&sock->netmask, APR_SO_TIMEOUT, t > 0);
     return APR_SUCCESS;
 }
 
@@ -193,6 +196,18 @@ apr_status_t apr_socket_opt_set(apr_socket_t *sock,
                 return errno;
             }
             apr_set_option(&sock->netmask, APR_SO_SNDBUF, on);
+        }
+#else
+        return APR_ENOTIMPL;
+#endif
+        break;
+    case APR_SO_RCVBUF:
+#ifdef SO_RCVBUF
+        if (apr_is_option_set(sock->netmask, APR_SO_RCVBUF) != on) {
+            if (setsockopt(sock->socketdes, SOL_SOCKET, SO_RCVBUF, (void *)&on, sizeof(int)) == -1) {
+                return errno;
+            }
+            apr_set_option(&sock->netmask, APR_SO_RCVBUF, on);
         }
 #else
         return APR_ENOTIMPL;
@@ -355,19 +370,18 @@ apr_status_t apr_socket_opt_get(apr_socket_t *sock,
 }
 
 
-/* deprecated */
-apr_status_t apr_setsocketopt(apr_socket_t *sock,
-                              apr_int32_t opt, apr_int32_t on)
+apr_status_t apr_socket_atmark(apr_socket_t *sock, int *atmark)
 {
-    return apr_socket_opt_set(sock, opt, on);
+    int oobmark;
+
+    if (ioctl(sock->socketdes, SIOCATMARK, (void*) &oobmark) < 0)
+        return apr_get_netos_error();
+
+    *atmark = (oobmark != 0);
+
+    return APR_SUCCESS;
 }
 
-apr_status_t apr_getsocketopt(apr_socket_t *sock,
-                              apr_int32_t opt, apr_int32_t *on)
-{
-    return apr_socket_opt_get(sock, opt, on);
-}
-                                           
 
 apr_status_t apr_gethostname(char *buf, apr_int32_t len, apr_pool_t *cont)
 {

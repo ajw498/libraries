@@ -49,7 +49,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo
+# ADD LIB32 /nologo /out:"LibR\apr-1.lib"
 
 !ELSEIF  "$(CFG)" == "apr - Win32 Debug"
 
@@ -73,7 +73,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo
+# ADD LIB32 /nologo /out:"LibD\apr-1.lib"
 
 !ENDIF 
 
@@ -154,6 +154,10 @@ SOURCE=.\file_io\win32\readwrite.c
 # Begin Source File
 
 SOURCE=.\file_io\win32\seek.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\file_io\unix\tempdir.c
 # End Source File
 # End Group
 # Begin Group "locks"
@@ -489,10 +493,6 @@ SOURCE=.\include\apr_allocator.h
 # Begin Source File
 
 SOURCE=.\include\apr_atomic.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\include\apr_compat.h
 # End Source File
 # Begin Source File
 

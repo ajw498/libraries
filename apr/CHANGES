@@ -1,4 +1,206 @@
+Changes with APR 1.0
+
+  *) Added new versions of the apr_atomic functions for
+     use with 32-bit ints  [Brian Pane]
+
+  *) The following deprecated interfaces have been removed:
+
+     apr_accept                   -> apr_socket_accept
+     apr_allocator_get_mutex      -> apr_allocator_mutex_get
+     apr_allocator_get_owner      -> apr_allocator_owner_get
+     apr_allocator_set_max_free   -> apr_allocator_max_free_set
+     apr_allocator_set_mutex      -> apr_allocator_mutex_set
+     apr_allocator_set_owner      -> apr_allocator_owner_set
+     apr_bind                     -> apr_socket_bind
+     apr_compare_groups           -> apr_gid_compare
+     apr_compare_users            -> apr_uid_compare
+     apr_connect                  -> apr_socket_connect
+     apr_current_userid           -> apr_uid_current
+     apr_explode_localtime        -> apr_time_exp_lt
+     apr_explode_time             -> apr_time_exp_tz
+     apr_filename_of_pathname     -> apr_filepath_name_get
+     apr_file_set_inherit         -> apr_file_inherit_set
+     apr_file_unset_inherit       -> apr_file_inherit_unset
+     apr_getsocketopt             -> apr_socket_opt_get
+     apr_get_groupid              -> apr_gid_get
+     apr_get_groupname            -> apr_gid_name_get
+     apr_get_home_directory       -> apr_uid_homepath_get
+     apr_get_userid               -> apr_uid_get
+     apr_get_username             -> apr_uid_name_get
+     apr_group_name_get           -> apr_gid_name_get
+     apr_implode_gmt              -> apr_time_exp_gmt_get
+     apr_is_fnmatch               -> apr_fnmatch_test
+     apr_listen                   -> apr_socket_listen
+     apr_lstat                    -> apr_stat
+     apr_pool_get_abort           -> apr_pool_abort_get
+     apr_pool_get_parent          -> apr_pool_parent_get
+     apr_pool_set_abort           -> apr_pool_abort_set
+     apr_pool_sub_make            -> apr_pool_create_ex
+     apr_recv                     -> apr_socket_recv
+     apr_recvfrom                 -> apr_socket_recvfrom
+     apr_send                     -> apr_socket_send
+     apr_sendfile                 -> apr_socket_sendfile
+     apr_sendto                   -> apr_socket_sendto
+     apr_sendv                    -> apr_socket_sendv
+     apr_setsocketopt             -> apr_socket_opt_set
+     apr_shutdown                 -> apr_socket_shutdown
+     apr_signal_get_description   -> apr_signal_description_get
+     apr_socket_create_ex         -> apr_socket_create
+     apr_socket_set_inherit       -> apr_socket_inherit_set
+     apr_socket_unset_inherit     -> apr_socket_inherit_unset
+     FNM_NOMATCH                  -> APR_FNM_NOMATCH
+     FNM_NOESCAPE                 -> APR_FNM_NOESCAPE
+     FNM_PATHNAME                 -> APR_FNM_PATHNAME
+     FNM_PERIOD                   -> APR_FNM_PERIOD
+     FNM_CASE_BLIND               -> APR_FNM_CASE_BLIND
+     MAX_SECONDS_TO_LINGER        -> APR_MAX_SECONDS_TO_LINGER
+
+     The following interfaces have function argument changes:
+
+     apr_mmap_dup
+     apr_socket_create
+
+     The following header files have been removed:
+
+     apr_compat.h
+
+Changes with APR 0.9.5
+
+  *) Fix make_exports.awk to work with apr-iconv.  [Justin Erenkrantz]
+
 Changes with APR 0.9.4
+
+  *) fix apr_file_dup() and apr_file_dup2() to dup the ungetchar
+     member [Stas Bekman]
+
+  *) Preserve leading '../' segments as when merging to an empty and
+     unrooted path - fixes a bug observed in SVN with Win32/Netware/OS2.
+     [Mike Pilato <cmpilato@collab.net>, William Rowe]
+
+  *) Work around a bug in Darwin when calling getnameinfo() on IPv4-mapped
+     IPv6-addresses.  [Colm MacCárthaigh <colm@stdlib.net>, Jeff Trawick,
+     Justin Erenkrantz]
+
+  *) Add apr_temp_dir_get() for getting the most suitable temp directory
+     [Mike Pilato <cmpilato@collab.net>, Thom May]
+
+  *) Modify apr_sockaddr_info_get to call the resolver when we
+     do not have a hostname.  Also, fix bugs in the getaddrinfo()
+     implementation.
+     [Colm MacCárthaigh <colm@stdlib.net>, Justin Erenkrantz]
+
+  *) Change the behavior of unix process 'trylock's to return
+     APR_ENOTIMPL instead of segfaulting, consistent with the
+     other lock implementations.  [William Rowe]
+
+  *) Fix a subtle race where the ownership of a unix nested
+     thread lock could be corrupted when the prior owner released
+     the lock with another thread waiting on the same lock.
+     [William Rowe]
+
+  *) apr_socket_data_set(): allow the same key to be used for
+     multiple sockets in the same pool.  [Jeff Trawick]
+
+  *) Add new table function apr_table_compress() and replace
+     red-black trees with mergesort in apr_table_overlap()
+     [Joe Schaefer <joe+gmane@sunstarsys.com>, Brian Pane]
+
+  *) Win32: Adopt Brian Havard's OS/2 rwlock implementation for
+     Windows [Marc Adkins, Bill Stoddard]
+
+  *) Add apr_proc_mutex_lockfile() for retrieving the name of the
+     file associated with a mutex.  [Jeff Trawick]
+
+  *) Don't require the lock file name to be passed into 
+     apr_proc_mutex_child_init() or apr_global_mutex_child_init().
+     This allows child init to work when the lock file was a temp
+     file created by APR.  (The problem only occurred with flock-
+     based mutexes.)  [Jeff Trawick]
+
+  *) When using a temporary file for flock- and fcntl-based mutexes, 
+     don't let the file be deleted on close.  For flock-based mutexes,
+     this corrects a fatal problem, since the file would disappear 
+     when a program was spawned and cleanup-for-exec was performed, 
+     and a subsequent attempt to perform child process mutex 
+     initialization would fail.  For fcntl-based mutexes, this was a 
+     very minor issue that resulted in a failing unlink() when the 
+     file was closed, since fcntl lock initialization always removes 
+     the file immediately.  [Jeff Trawick]
+
+  *) When writing to pipes with a timeout set, handle the situation
+     where the kernel says the pipe is writable but an attempt to
+     write <= PIPE_BUF bytes gets EAGAIN.  APR will now write whatever
+     data will fit.  APR applications that relied on the atomic nature
+     of relatively small pipe write requests may be affected.
+     PR 20295  [Mark Street <mark@faime.demon.co.uk>, Jeff Trawick]
+
+  *) Define _THREAD_SAFE for all compilations on AIX.  Previously
+     those of us who used the vendor compiler had it defined
+     implicitly and others did not.  The difference became obvious
+     with the recent thread safety fixes to apr_password_validate().
+     PR 20420  [Jeff Trawick]
+
+  *) For apr_proc_detach(APR_PROC_DETACH_FOREGROUND), don't treat
+     a setsid() failure as fatal, as the usual cause is that the
+     caller is already a process group leader.  PR 18519
+     [Jeff Trawick]
+
+  *) Fix some problems with non-blocking socket handling on unix
+     that resulted in infinite timeouts being used for non-blocking
+     sockets with apr_socket_connect() and some read/write calls.
+     [Jeff Trawick]
+
+  *) Fix a bug in socket timeout handling on unix that left the
+     socket non-blocking after disabling the timeout.
+     [Jacob Craig Lewallen <jlewalle@cs.ucr.edu>]
+
+  *) Added flag APR_FILE_ATTR_HIDDEN for manipulating the "hidden"
+     file attribute on Windows and OS/2.  [Branko Cibej]
+
+  *) SECURITY [CAN-2003-0245]: Fixed a bug that could be triggered
+     remotely through mod_dav and possibly other mechanisms, causing
+     an Apache child process to crash.  The crash was first reported
+     by David Endler <DEndler@iDefense.com> and was researched and
+     fixed by Joe Orton <jorton@redhat.com>.  Details will be released
+     on 30 May 2003.
+
+  *) apr_proc_wait(): Handle interrupted waitpid(2) calls by calling
+     it repeatedly until it succeeds or fails with errno other than
+     EINTR.  This hides this UNIX-specific behavior from APR clients.
+
+  *) Removed the solaris-specific atomic code, due to licence
+     concerns (it was MPL 1.0, and the author could not be contacted)
+     [Ian Holsman]
+
+  *) apr_file_gets(): Return APR_SUCCESS if any characters are
+     returned.  Any I/O errors or EOF will be reported on the
+     next call.  Callers that are coded to expect returned 
+     data + APR_EOF when there is no final newline are affected 
+     by this change.  [Jeff Trawick]
+
+  *) apr_proc_create() on Unix: Make the APR_SHELLCMD mode work
+     when there is more than one program argument passed in.
+     [Jeff Trawick]
+
+  *) Add --cc and --cpp flags to apr-config.  [Jeff Trawick]
+
+  *) Don't segfault trying to close a file in error paths of flock
+     and fcntl mutex creation.  PR 19036  [Jeff Trawick]
+
+  *) Add %pT support to apr_snprintf() for printing an apr_os_thread_t.
+     [Jeff Trawick]
+
+  *) Add APR_TCP_NODELAY_INHERITED & APR_O_NONBLOCK_INHERITED to apr.hw
+     [Allan Edwards]
+
+  *) Add APR_UINT64_T_HEX_FMT.  [Jeff Trawick]
+
+  *) Add parameter to APR_SUBDIR_CONFIG to drop options passed to configure
+     before the subdir's configure is invoked.
+     [Jeff Trawick, Justin Erenkrantz]
+
+  *) Implement APR_SO_RCVBUF socket option on Unix.  
+     [Adam Sussman <myddryn@vishnu.vidya.com>]
 
   *) Don't add the math library (-lm) if the modf() function
      is already available via libc.  [Roy Fielding]
@@ -7,6 +209,11 @@ Changes with APR 0.9.4
      is for non-Posix threading, and the use of it prevented us from
      linking with -lpthread, which in turn caused weird problems for
      APR applications.  [Kristofer Spinka <kspinka@style.net>]
+
+  *) OS/2: apr_stat() fixes - When a character device is stat'ed, 
+     fill in finfo.name if it was asked for.  Return APR_INCOMPLETE 
+     when appropriate.  Addresses httpd incident [CAN-2003-0134].
+     [Brian Havard]
 
 Changes with APR 0.9.3
 
@@ -1269,7 +1476,7 @@ Changes with APR 0.9.0
      [Mike Pilato <cmpilato@collab.net>] 
   
   *) Add apr_open_stdout.  This mirrors apr_open_stderr, except it works
-     on stdout.  [cmpilato@collab.net]
+     on stdout.  [Mike Pilato <cmpilato@collab.net>]
 
   *) Fix bug in file_io/unix/dir.c.  There is no such thing as a dirent,
      it must be a struct dirent.  

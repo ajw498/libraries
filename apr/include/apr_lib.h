@@ -121,9 +121,6 @@ struct apr_vformatter_buff_t {
  */
 APR_DECLARE(const char *) apr_filepath_name_get(const char *pathname);
 
-/** @deprecated @see apr_filepath_name_get */
-APR_DECLARE(const char *) apr_filename_of_pathname(const char *pathname);
-
 /**
  * apr_killpg
  * Small utility macros to make things easier to read.  Not usually a
@@ -155,6 +152,8 @@ APR_DECLARE(const char *) apr_filename_of_pathname(const char *pathname);
  * %%pA	takes a struct in_addr *, and prints it as a.b.c.d
  * %%pI	takes an apr_sockaddr_t * and prints it as a.b.c.d:port or
  *      [ipv6-address]:port
+ * %%pT takes an apr_os_thread_t * and prints it in decimal
+ *      ('0' is printed if !APR_HAS_THREADS)
  * %%pp takes a void * and outputs it in hex
  *
  * The %%p hacks are to force gcc's printf warning code to skip

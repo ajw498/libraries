@@ -86,25 +86,28 @@ extern "C" {
  * @{
  */
 
-#define APR_READ       1           /**< Open the file for reading */
-#define APR_WRITE      2           /**< Open the file for writing */
-#define APR_CREATE     4           /**< Create the file if not there */
-#define APR_APPEND     8           /**< Append to the end of the file */
-#define APR_TRUNCATE   16          /**< Open the file and truncate to 0 length */
-#define APR_BINARY     32          /**< Open the file in binary mode */
-#define APR_EXCL       64          /**< Open should fail if APR_CREATE and file
+/* Note to implementors: Values in the range 0x00100000--0x80000000
+   are reserved for platform-specific values. */
+
+#define APR_READ       0x00001     /**< Open the file for reading */
+#define APR_WRITE      0x00002     /**< Open the file for writing */
+#define APR_CREATE     0x00004     /**< Create the file if not there */
+#define APR_APPEND     0x00008     /**< Append to the end of the file */
+#define APR_TRUNCATE   0x00010     /**< Open the file and truncate to 0 length */
+#define APR_BINARY     0x00020     /**< Open the file in binary mode */
+#define APR_EXCL       0x00040     /**< Open should fail if APR_CREATE and file
                                         exists. */
-#define APR_BUFFERED   128         /**< Open the file for buffered I/O */
-#define APR_DELONCLOSE 256         /**< Delete the file after close */
-#define APR_XTHREAD    512         /**< Platform dependent tag to open the file
+#define APR_BUFFERED   0x00080     /**< Open the file for buffered I/O */
+#define APR_DELONCLOSE 0x00100     /**< Delete the file after close */
+#define APR_XTHREAD    0x00200     /**< Platform dependent tag to open the file
                                         for use across multiple threads */
-#define APR_SHARELOCK  1024        /**< Platform dependent support for higher
+#define APR_SHARELOCK  0x00400     /**< Platform dependent support for higher
                                         level locked read/write access to support
                                         writes across process/machines */
-#define APR_FILE_NOCLEANUP  2048   /**< Do not register a cleanup when the file
+#define APR_FILE_NOCLEANUP 0x00800 /**< Do not register a cleanup when the file
                                         is opened */
-#define APR_SENDFILE_ENABLED  4096 /**< Advisory flag that this file should 
-                                        support apr_sendfile operation */ 
+#define APR_SENDFILE_ENABLED 0x01000 /**< Advisory flag that this file should
+                                          support apr_socket_sendfile operation */
 /** @} */
 
 /**
@@ -129,6 +132,7 @@ extern "C" {
 /* flags for apr_file_attrs_set */
 #define APR_FILE_ATTR_READONLY   0x01          /**< File is read-only */
 #define APR_FILE_ATTR_EXECUTABLE 0x02          /**< File is executable */
+#define APR_FILE_ATTR_HIDDEN     0x04          /**< File is hidden */
 /** @} */
 
 /** File attributes */
@@ -191,7 +195,7 @@ typedef struct apr_file_t         apr_file_t;
  *                               be closed when the pool is destroyed.
  *         APR_SENDFILE_ENABLED  Open with appropriate platform semantics
  *                               for sendfile operations.  Advisory only,
- *                               apr_sendfile does not check this flag.
+ *                               apr_socket_sendfile does not check this flag.
  * </PRE>
  * @param perm Access permissions for file.
  * @param cont The pool to use.
@@ -434,8 +438,8 @@ APR_DECLARE(apr_status_t) apr_file_putc(char ch, apr_file_t *thefile);
 
 /**
  * get a character from the specified file.
- * @param ch The character to write.
- * @param thefile The file descriptor to write to
+ * @param ch The character to read into
+ * @param thefile The file descriptor to read from
  */
 APR_DECLARE(apr_status_t) apr_file_getc(char *ch, apr_file_t *thefile);
 
@@ -451,6 +455,7 @@ APR_DECLARE(apr_status_t) apr_file_ungetc(char ch, apr_file_t *thefile);
  * @param str The buffer to store the string in. 
  * @param len The length of the string
  * @param thefile The file descriptor to read from
+ * @remark The buffer will be '\0'-terminated if any characters are stored.
  */
 APR_DECLARE(apr_status_t) apr_file_gets(char *str, int len, apr_file_t *thefile);
 
@@ -638,6 +643,7 @@ APR_DECLARE(apr_status_t) apr_file_perms_set(const char *fname,
  * <PRE>
  *            APR_FILE_ATTR_READONLY   - make the file readonly
  *            APR_FILE_ATTR_EXECUTABLE - make the file executable
+ *            APR_FILE_ATTR_HIDDEN     - make the file hidden
  * </PRE>
  * @param attr_mask Mask of valid bits in attributes.
  * @param cont the pool to use.
@@ -652,6 +658,18 @@ APR_DECLARE(apr_status_t) apr_file_attrs_set(const char *fname,
                                              apr_fileattrs_t attributes,
                                              apr_fileattrs_t attr_mask,
                                              apr_pool_t *cont);
+
+/**
+ * Set the mtime of the specified file.
+ * @param fname The full path to the file (using / on all systems)
+ * @param mtime The mtime to apply to the file.
+ * @param pool The pool to use.
+ * @warning Platforms which do not implement this feature will return
+ *      APR_ENOTIMPL.
+ */
+APR_DECLARE(apr_status_t) apr_file_mtime_set(const char *fname,
+                                             apr_time_t mtime,
+                                             apr_pool_t *pool);
 
 /**
  * Create a new directory on the file system.
@@ -716,16 +734,10 @@ APR_POOL_DECLARE_ACCESSOR(file);
  */
 APR_DECLARE_INHERIT_SET(file);
 
-/** @deprecated @see apr_file_inherit_set */
-APR_DECLARE(void) apr_file_set_inherit(apr_file_t *file);
-
 /**
  * Unset a file from being inherited by child processes.
  */
 APR_DECLARE_INHERIT_UNSET(file);
-
-/** @deprecated @see apr_file_inherit_unset */
-APR_DECLARE(void) apr_file_unset_inherit(apr_file_t *file);
 
 /**
  * Open a temporary file
@@ -745,6 +757,22 @@ APR_DECLARE(void) apr_file_unset_inherit(apr_file_t *file);
  */
 APR_DECLARE(apr_status_t) apr_file_mktemp(apr_file_t **fp, char *templ,
                                           apr_int32_t flags, apr_pool_t *p);
+
+
+/**
+ * Find an existing directory suitable as a temporary storage location.
+ * @param temp_dir The temp directory.
+ * @param p The pool to use for any necessary allocations.
+ * @remark   
+ * This function uses an algorithm to search for a directory that an
+ * an application can use for temporary storage.  Once such a
+ * directory is found, that location is cached by the library.  Thus,
+ * callers only pay the cost of this algorithm once if that one time
+ * is successful.
+ *
+ */
+APR_DECLARE(apr_status_t) apr_temp_dir_get(const char **temp_dir, 
+                                           apr_pool_t *p);
 
 /** @} */
 

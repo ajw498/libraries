@@ -64,23 +64,34 @@
 #include <stdlib.h>
 #include "test_apr.h"
 
+#if APR_HAS_FORK
 
-#define MAX_ITER 4000
-#define MAX_COUNTER (MAX_ITER * 4)
+#define MAX_ITER 200
+#define CHILDREN 6
+#define MAX_COUNTER (MAX_ITER * CHILDREN)
 
-apr_proc_mutex_t *proc_lock;
-apr_pool_t *pool;
-int *x;
+static apr_proc_mutex_t *proc_lock;
+static volatile int *x;
 
-static int make_child(apr_proc_t **proc, apr_pool_t *p)
+/* a slower more racy way to implement (*x)++ */
+static int increment(int n)
 {
-    int i = 0;
+    apr_sleep(1);
+    return n+1;
+}
+
+static void make_child(CuTest *tc, apr_proc_t **proc, apr_pool_t *p)
+{
+    apr_status_t rv;
+
     *proc = apr_pcalloc(p, sizeof(**proc));
 
     /* slight delay to allow things to settle */
     apr_sleep (1);
 
-    if (apr_proc_fork(*proc, p) == APR_INCHILD) {
+    rv = apr_proc_fork(*proc, p);
+    if (rv == APR_INCHILD) {
+        int i = 0;
         /* The parent process has setup all processes to call apr_terminate
          * at exit.  But, that means that all processes must also call
          * apr_initialize at startup.  You cannot have an unequal number
@@ -91,112 +102,84 @@ static int make_child(apr_proc_t **proc, apr_pool_t *p)
          */
         apr_initialize();
 
-        while (1) {
-            apr_proc_mutex_lock(proc_lock); 
-            if (i == MAX_ITER) {
-                apr_proc_mutex_unlock(proc_lock); 
+        if (apr_proc_mutex_child_init(&proc_lock, NULL, p))
+            exit(1);
+
+        do {
+            if (apr_proc_mutex_lock(proc_lock))
                 exit(1);
-            }
             i++;
-            (*x)++;
-            apr_proc_mutex_unlock(proc_lock); 
-        }
-        exit(1);
-    }
-    return APR_SUCCESS;
+            *x = increment(*x);
+            if (apr_proc_mutex_unlock(proc_lock))
+                exit(1);
+        } while (i < MAX_ITER);
+        exit(0);
+    } 
+
+    CuAssert(tc, "fork failed", rv == APR_INPARENT);
 }
 
-static apr_status_t test_exclusive(const char *lockname)
+/* Wait for a child process and check it terminated with success. */
+static void await_child(CuTest *tc, apr_proc_t *proc)
 {
-    apr_proc_t *p1, *p2, *p3, *p4;
-    apr_status_t s1, s2, s3, s4;
- 
-    printf("Exclusive lock test\n");
-    printf("%-60s", "    Initializing the lock");
-    s1 = apr_proc_mutex_create(&proc_lock, lockname, APR_LOCK_DEFAULT, pool);
- 
-    if (s1 != APR_SUCCESS) {
-        printf("Failed!\n");
-        return s1;
-    }
-    printf("OK\n");
- 
-    printf("%-60s", "    Starting all of the processes");
-    fflush(stdout);
-    s1 = make_child(&p1, pool);
-    s2 = make_child(&p2, pool);
-    s3 = make_child(&p3, pool);
-    s4 = make_child(&p4, pool);
-    if (s1 != APR_SUCCESS || s2 != APR_SUCCESS ||
-        s3 != APR_SUCCESS || s4 != APR_SUCCESS) {
-        printf("Failed!\n");
-        return s1;
-    }
-    printf("OK\n");
- 
-    printf("%-60s", "    Waiting for processes to exit");
-    s1 = apr_proc_wait(p1, NULL, NULL, APR_WAIT);
-    s2 = apr_proc_wait(p2, NULL, NULL, APR_WAIT);
-    s3 = apr_proc_wait(p3, NULL, NULL, APR_WAIT);
-    s4 = apr_proc_wait(p4, NULL, NULL, APR_WAIT);
-    printf("OK\n");
- 
-    if ((*x) != MAX_COUNTER) {
-        fprintf(stderr, "Locks don't appear to work!  x = %d instead of %d\n",
-                (*x), MAX_COUNTER);
-    }
-    else {
-        printf("Test passed\n");
-    }
-    return APR_SUCCESS;
-}
-
-int main(int argc, const char * const *argv)
-{
+    int code;
+    apr_exit_why_e why;
     apr_status_t rv;
-    char errmsg[200];
-    const char *lockname = NULL;
-    const char *shmname = "shm.file";
-    apr_getopt_t *opt;
-    char optchar;
-    const char *optarg;
+
+    rv = apr_proc_wait(proc, &code, &why, APR_WAIT);
+    CuAssert(tc, "child did not terminate with success",
+             rv == APR_CHILD_DONE && why == APR_PROC_EXIT && code == 0);
+}
+
+static void test_exclusive(CuTest *tc, const char *lockname)
+{
+    apr_proc_t *child[CHILDREN];
+    apr_status_t rv;
+    int n;
+ 
+    rv = apr_proc_mutex_create(&proc_lock, lockname, APR_LOCK_DEFAULT, p);
+    apr_assert_success(tc, "create the mutex", rv);
+ 
+    for (n = 0; n < CHILDREN; n++)
+        make_child(tc, &child[n], p);
+
+    for (n = 0; n < CHILDREN; n++)
+        await_child(tc, child[n]);
+    
+    CuAssert(tc, "Locks don't appear to work", *x == MAX_COUNTER);
+}
+#endif
+
+static void proc_mutex(CuTest *tc)
+{
+#if APR_HAS_FORK
+    apr_status_t rv;
+    const char *shmname = "tpm.shm";
     apr_shm_t *shm;
 
-    printf("APR Proc Mutex Test\n==============\n\n");
-        
-    apr_initialize();
-    atexit(apr_terminate);
-
-    if (apr_pool_create(&pool, NULL) != APR_SUCCESS)
-        exit(-1);
-
-    if ((rv = apr_getopt_init(&opt, pool, argc, argv)) != APR_SUCCESS) {
-        fprintf(stderr, "Could not set up to parse options: [%d] %s\n",
-                rv, apr_strerror(rv, errmsg, sizeof errmsg));
-        exit(-1);
-    }
-        
-    while ((rv = apr_getopt(opt, "f:", &optchar, &optarg)) == APR_SUCCESS) {
-        if (optchar == 'f') {
-            lockname = optarg;
-        }
+    /* Use anonymous shm if available. */
+    rv = apr_shm_create(&shm, sizeof(int), NULL, p);
+    if (rv == APR_ENOTIMPL) {
+        apr_file_remove(shmname, p);
+        rv = apr_shm_create(&shm, sizeof(int), shmname, p);
     }
 
-    if (rv != APR_SUCCESS && rv != APR_EOF) {
-        fprintf(stderr, "Could not parse options: [%d] %s\n",
-                rv, apr_strerror(rv, errmsg, sizeof errmsg));
-        exit(-1);
-    }
+    apr_assert_success(tc, "create shm segment", rv);
 
-    apr_shm_create(&shm, sizeof(int), shmname, pool);
     x = apr_shm_baseaddr_get(shm);
+    test_exclusive(tc, NULL);
+#else
+    CuNotImpl(tc, "APR lacks fork() support");
+#endif
+}
 
-    if ((rv = test_exclusive(lockname)) != APR_SUCCESS) {
-        fprintf(stderr,"Exclusive Lock test failed : [%d] %s\n",
-                rv, apr_strerror(rv, (char*)errmsg, 200));
-        exit(-2);
-    }
-    
-    return 0;
+
+CuSuite *testprocmutex(void)
+{
+    CuSuite *suite = CuSuiteNew("Cross-Process Mutexes");
+
+    SUITE_ADD_TEST(suite, proc_mutex);
+
+    return suite;
 }
 

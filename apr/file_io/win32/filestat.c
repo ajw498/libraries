@@ -363,7 +363,8 @@ int fillin_fileinfo(apr_finfo_t *finfo,
         finfo->size = 0x7fffffff;
 #endif
 
-    if (wininfo->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
+    if (wanted & APR_FINFO_LINK &&
+        wininfo->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
         finfo->filetype = APR_LNK;
     }
     else if (wininfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
@@ -685,12 +686,6 @@ APR_DECLARE(apr_status_t) apr_stat(apr_finfo_t *finfo, const char *fname,
     return APR_SUCCESS;
 }
 
-APR_DECLARE(apr_status_t) apr_lstat(apr_finfo_t *finfo, const char *fname,
-                                    apr_int32_t wanted, apr_pool_t *pool)
-{
-    return apr_stat(finfo, fname, wanted | APR_FINFO_LINK, pool);
-}
-
 APR_DECLARE(apr_status_t) apr_file_attrs_set(const char *fname,
                                              apr_fileattrs_t attributes,
                                              apr_fileattrs_t attr_mask,
@@ -701,6 +696,11 @@ APR_DECLARE(apr_status_t) apr_file_attrs_set(const char *fname,
 #if APR_HAS_UNICODE_FS
     apr_wchar_t wfname[APR_PATH_MAX];
 #endif
+
+    /* Don't do anything if we can't handle the requested attributes */
+    if (!(attr_mask & (APR_FILE_ATTR_READONLY
+                       | APR_FILE_ATTR_HIDDEN)))
+        return APR_SUCCESS;
 
 #if APR_HAS_UNICODE_FS
     IF_WIN_OS_IS_UNICODE
@@ -730,6 +730,14 @@ APR_DECLARE(apr_status_t) apr_file_attrs_set(const char *fname,
             flags &= ~FILE_ATTRIBUTE_READONLY;
     }
 
+    if (attr_mask & APR_FILE_ATTR_HIDDEN)
+    {
+        if (attributes & APR_FILE_ATTR_HIDDEN)
+            flags |= FILE_ATTRIBUTE_HIDDEN;
+        else
+            flags &= ~FILE_ATTRIBUTE_HIDDEN;
+    }
+
 #if APR_HAS_UNICODE_FS
     IF_WIN_OS_IS_UNICODE
     {
@@ -747,4 +755,38 @@ APR_DECLARE(apr_status_t) apr_file_attrs_set(const char *fname,
         return apr_get_os_error();
 
     return APR_SUCCESS;
+}
+
+
+APR_DECLARE(apr_status_t) apr_file_mtime_set(const char *fname,
+                                             apr_time_t mtime,
+                                             apr_pool_t *pool)
+{
+    apr_file_t *thefile;
+    apr_status_t rv;
+
+    rv = apr_file_open(&thefile, fname,
+                       APR_READ | APR_WRITEATTRS,
+                       APR_OS_DEFAULT, pool);
+    if (!rv)
+    {
+        FILETIME file_ctime;
+        FILETIME file_atime;
+        FILETIME file_mtime;
+
+        if (!GetFileTime(thefile->filehand,
+                         &file_ctime, &file_atime, &file_mtime))
+            rv = apr_get_os_error();
+        else
+        {
+            AprTimeToFileTime(&file_mtime, mtime);
+            if (!SetFileTime(thefile->filehand,
+                             &file_ctime, &file_atime, &file_mtime))
+                rv = apr_get_os_error();
+        }
+
+        apr_file_close(thefile);
+    }
+
+    return rv;
 }

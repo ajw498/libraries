@@ -317,7 +317,6 @@ APR_DECLARE(apr_status_t) apr_proc_create(apr_proc_t *new,
                                           apr_pool_t *pool)
 {
     int i;
-    const char **newargs;
 
     new->in = attr->parent_in;
     new->err = attr->parent_err;
@@ -404,7 +403,7 @@ APR_DECLARE(apr_status_t) apr_proc_create(apr_proc_t *new,
             apr_file_close(attr->child_err);
         }
 
-        apr_signal(SIGCHLD, SIG_DFL); /* not sure if this is needed or not */
+       /* apr_signal(SIGCHLD, SIG_DFL);*/ /* not sure if this is needed or not */
 
         if (attr->currdir != NULL) {
             if (chdir(attr->currdir) == -1) {
@@ -423,22 +422,51 @@ APR_DECLARE(apr_status_t) apr_proc_create(apr_proc_t *new,
         }
 
         if (attr->cmdtype == APR_SHELLCMD) {
-            i = 0;
-            while (args[i]) {
-                i++;
-            }
+            int onearg_len = 0;
+            const char *newargs[4];
 
-            newargs = (const char **)apr_palloc(pool, sizeof (char *) * (i + 3));
             newargs[0] = SHELL_PATH;
             newargs[1] = "-c";
 
             i = 0;
             while (args[i]) {
-                newargs[i + 2] = args[i];
+                onearg_len += strlen(args[i]);
+                onearg_len++; /* for space delimiter */
                 i++;
             }
 
-            newargs[i + 2] = NULL;
+            switch(i) {
+            case 0:
+                /* bad parameters; we're doomed */
+                break;
+            case 1:
+                /* no args, or caller already built a single string from
+                 * progname and args
+                 */
+                newargs[2] = args[0];
+                break;
+            default:
+            {
+                char *ch, *onearg;
+                
+                ch = onearg = apr_palloc(pool, onearg_len);
+                i = 0;
+                while (args[i]) {
+                    size_t len = strlen(args[i]);
+
+                    memcpy(ch, args[i], len);
+                    ch += len;
+                    *ch = ' ';
+                    ++ch;
+                    ++i;
+                }
+                --ch; /* back up to trailing blank */
+                *ch = '\0';
+                newargs[2] = onearg;
+            }
+            }
+
+            newargs[3] = NULL;
 
             if (attr->detached) {
                 apr_proc_detach(APR_PROC_DETACH_DAEMONIZE);
@@ -529,7 +557,11 @@ APR_DECLARE(apr_status_t) apr_proc_wait(apr_proc_t *proc,
         waitpid_options |= WNOHANG;
     }
 
-    if ((pstatus = waitpid(proc->pid, &exit_int, waitpid_options)) > 0) {
+    do {
+        pstatus = waitpid(proc->pid, &exit_int, waitpid_options);
+    } while (pstatus < 0 && errno == EINTR);
+
+    if (pstatus > 0) {
         proc->pid = pstatus;
 
         if (WIFEXITED(exit_int)) {

@@ -54,6 +54,7 @@
 
 #include "apr_arch_networkio.h"
 #include "apr_network_io.h"
+#include "apr_strings.h"
 #include "apr_support.h"
 #include "apr_portable.h"
 #include "apr_arch_inherit.h"
@@ -110,8 +111,8 @@ apr_status_t apr_socket_protocol_get(apr_socket_t *sock, int *protocol)
     return APR_SUCCESS;
 }
 
-apr_status_t apr_socket_create_ex(apr_socket_t **new, int ofamily, int type,
-                                  int protocol, apr_pool_t *cont)
+apr_status_t apr_socket_create(apr_socket_t **new, int ofamily, int type,
+                               int protocol, apr_pool_t *cont)
 {
     int family = ofamily;
 
@@ -145,12 +146,6 @@ apr_status_t apr_socket_create_ex(apr_socket_t **new, int ofamily, int type,
                               socket_cleanup);
     return APR_SUCCESS;
 } 
-
-apr_status_t apr_socket_create(apr_socket_t **new, int family, int type,
-                               apr_pool_t *cont)
-{
-    return apr_socket_create_ex(new, family, type, 0, cont);
-}
 
 apr_status_t apr_socket_shutdown(apr_socket_t *thesocket, 
                                  apr_shutdown_how_e how)
@@ -271,7 +266,8 @@ apr_status_t apr_socket_connect(apr_socket_t *sock, apr_sockaddr_t *sa)
     /* we can see EINPROGRESS the first time connect is called on a non-blocking
      * socket; if called again, we can see EALREADY
      */
-    if (rc == -1 && (errno == EINPROGRESS || errno == EALREADY) && sock->timeout != 0) {
+    if (rc == -1 && (errno == EINPROGRESS || errno == EALREADY) &&
+        apr_is_option_set(sock->netmask, APR_SO_TIMEOUT)) {
         rc = apr_wait_for_io_or_timeout(NULL, sock, 0);
         if (rc != APR_SUCCESS) {
             return rc;
@@ -317,13 +313,36 @@ apr_status_t apr_socket_connect(apr_socket_t *sock, apr_sockaddr_t *sa)
 
 apr_status_t apr_socket_data_get(void **data, const char *key, apr_socket_t *sock)
 {
-    return apr_pool_userdata_get(data, key, sock->cntxt);
+    sock_userdata_t *cur = sock->userdata;
+
+    *data = NULL;
+
+    while (cur) {
+        if (!strcmp(cur->key, key)) {
+            *data = cur->data;
+            break;
+        }
+        cur = cur->next;
+    }
+
+    return APR_SUCCESS;
 }
 
 apr_status_t apr_socket_data_set(apr_socket_t *sock, void *data, const char *key,
-                              apr_status_t (*cleanup) (void *))
+                                 apr_status_t (*cleanup) (void *))
 {
-    return apr_pool_userdata_set(data, key, cleanup, sock->cntxt);
+    sock_userdata_t *new = apr_palloc(sock->cntxt, sizeof(sock_userdata_t));
+
+    new->key = apr_pstrdup(sock->cntxt, key);
+    new->data = data;
+    new->next = sock->userdata;
+    sock->userdata = new;
+
+    if (cleanup) {
+        apr_pool_cleanup_register(sock->cntxt, data, cleanup, cleanup);
+    }
+
+    return APR_SUCCESS;
 }
 
 apr_status_t apr_os_sock_get(apr_os_sock_t *thesock, apr_socket_t *sock)
@@ -337,11 +356,7 @@ apr_status_t apr_os_sock_make(apr_socket_t **apr_sock,
                               apr_pool_t *cont)
 {
     alloc_socket(apr_sock, cont);
-#ifdef APR_ENABLE_FOR_1_0 /* no protocol field yet */
     set_socket_vars(*apr_sock, os_sock_info->family, os_sock_info->type, os_sock_info->protocol);
-#else
-    set_socket_vars(*apr_sock, os_sock_info->family, os_sock_info->type, 0);
-#endif
     (*apr_sock)->timeout = -1;
     (*apr_sock)->socketdes = *os_sock_info->os_sock;
     if (os_sock_info->local) {
@@ -395,34 +410,3 @@ apr_status_t apr_os_sock_put(apr_socket_t **sock, apr_os_sock_t *thesock,
 APR_IMPLEMENT_INHERIT_SET(socket, inherit, cntxt, socket_cleanup)
 
 APR_IMPLEMENT_INHERIT_UNSET(socket, inherit, cntxt, socket_cleanup)
-
-/* deprecated */
-apr_status_t apr_shutdown(apr_socket_t *thesocket, apr_shutdown_how_e how)
-{
-    return apr_socket_shutdown(thesocket, how);
-}
-
-/* deprecated */
-apr_status_t apr_bind(apr_socket_t *sock, apr_sockaddr_t *sa)
-{
-    return apr_socket_bind(sock, sa);
-}
-
-/* deprecated */
-apr_status_t apr_listen(apr_socket_t *sock, apr_int32_t backlog)
-{
-    return apr_socket_listen(sock, backlog);
-}
-
-/* deprecated */
-apr_status_t apr_accept(apr_socket_t **new, apr_socket_t *sock,
-                        apr_pool_t *connection_context)
-{
-    return apr_socket_accept(new, sock, connection_context);
-}
-
-/* deprecated */
-apr_status_t apr_connect(apr_socket_t *sock, apr_sockaddr_t *sa)
-{
-    return apr_socket_connect(sock, sa);
-}

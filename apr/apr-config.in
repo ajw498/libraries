@@ -89,6 +89,8 @@ Known values for OPTION are:
   --prefix[=DIR]    change prefix to DIR
   --bindir          print location where binaries are installed
   --includedir      print location where headers are installed
+  --cc              print C compiler name
+  --cpp             print C preprocessor name and any required options
   --cflags          print C compiler flags
   --cppflags        print cpp flags
   --includes        print include information
@@ -132,8 +134,10 @@ fi
 # Otherwise, being in a symlinked dir may result in incorrect output.
 if test -x "`which realpath 2>/dev/null`"; then
   thisdir="`realpath $thisdir`"
-  APR_SOURCE_DIR="`realpath $APR_SOURCE_DIR`"
-  if test -n $tmpbindir; then
+  if test -d "$APR_SOURCE_DIR"; then
+    APR_SOURCE_DIR="`realpath $APR_SOURCE_DIR`"
+  fi
+  if test -n "$tmpbindir"; then
     tmpbindir="`realpath $tmpbindir`"
   fi
 fi
@@ -183,6 +187,14 @@ while test $# -gt 0; do
         flags="$thisdir/include $APR_SOURCE_DIR/include"
     fi
     echo $flags
+    exit 0
+    ;;
+    --cc)
+    echo $CC
+    exit 0
+    ;;
+    --cpp)
+    echo $CPP
     exit 0
     ;;
     --cflags)
@@ -267,9 +279,9 @@ while test $# -gt 0; do
     ;;
     --apr-libtool)
     if test "$location" = "installed"; then
-        echo "${SHELL} ${installbuilddir}/libtool"
+        echo "${installbuilddir}/libtool"
     else
-        echo "${SHELL} $thisdir/libtool"
+        echo "$thisdir/libtool"
     fi
     exit 0
     ;;

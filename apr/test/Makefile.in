@@ -1,12 +1,16 @@
 srcdir = @srcdir@
 VPATH = @srcdir@
 
-NONPORTABLE = \
-	testshm@EXEEXT@ \
-	testprocmutex@EXEEXT@ \
-	testglobalmutex@EXEEXT@
+# PROGRAMS includes all test programs built on this platform.
+# STDTEST_PORTABLE
+#   test programs invoked via standard user interface, run on all platforms
+# STDTEST_NONPORTABLE
+#   test programs invoked via standard user interface, not portable
+# OTHER_PROGRAMS
+#   programs such as sendfile, that have to be invoked in a special sequence
+#   or with special parameters
 
-PROGRAMS = \
+STDTEST_PORTABLE = \
 	testflock@EXEEXT@ \
 	testsock@EXEEXT@ \
 	testlockperf@EXEEXT@ \
@@ -16,9 +20,16 @@ PROGRAMS = \
 	testmutexscope@EXEEXT@ \
 	testall@EXEEXT@
 
+STDTEST_NONPORTABLE = \
+	testshm@EXEEXT@ \
+	testglobalmutex@EXEEXT@
 
-TARGETS = $(PROGRAMS) $(NONPORTABLE) client@EXEEXT@ sendfile@EXEEXT@ \
-	server@EXEEXT@ 
+OTHER_PROGRAMS = client@EXEEXT@ sendfile@EXEEXT@ \
+	server@EXEEXT@
+
+PROGRAMS = $(STDTEST_PORTABLE) $(STDTEST_NONPORTABLE) $(OTHER_PROGRAMS)
+
+TARGETS = $(PROGRAMS)
 
 # bring in rules.mk for standard functionality
 @INCLUDE_RULES@
@@ -26,15 +37,13 @@ TARGETS = $(PROGRAMS) $(NONPORTABLE) client@EXEEXT@ sendfile@EXEEXT@ \
 LOCAL_LIBS=../lib@APR_LIBNAME@.la
 
 CLEAN_TARGETS = testfile.tmp mod_test.slo proc_child@EXEEXT@ occhild@EXEEXT@ \
-	        testprocmutex@EXEEXT@ testglobalmutex@EXEEXT@ testshm@EXEEXT@
+readchild@EXEEXT@
 
 INCDIR=../include
 INCLUDES=-I$(INCDIR)
 
-CFLAGS=$(MY_CFLAGS)
-
-check: $(PROGRAMS) $(NONPORTABLE) testall
-	for prog in $(PROGRAMS) $(NONPORTABLE) testall; do \
+check: $(STDTEST_PORTABLE) $(STDTEST_NONPORTABLE)
+	for prog in $(STDTEST_PORTABLE) $(STDTEST_NONPORTABLE); do \
 		./$$prog; \
 		if test $$? = 255; then \
 			echo "$$prog failed"; \
@@ -48,6 +57,9 @@ testflock@EXEEXT@: testflock.lo $(LOCAL_LIBS)
 occhild@EXEEXT@: occhild.lo $(LOCAL_LIBS)
 	$(LINK) occhild.lo $(LOCAL_LIBS) $(ALL_LIBS)
 
+readchild@EXEEXT@: readchild.lo $(LOCAL_LIBS)
+	$(LINK) readchild.lo $(LOCAL_LIBS) $(ALL_LIBS)
+
 proc_child@EXEEXT@: proc_child.lo $(LOCAL_LIBS)
 	$(LINK) proc_child.lo $(LOCAL_LIBS) $(ALL_LIBS)
 
@@ -56,10 +68,10 @@ mod_test.slo: $(srcdir)/mod_test.c
 	$(LIBTOOL) --mode=compile $(COMPILE) -prefer-pic -c $(srcdir)/mod_test.c && touch $@
 
 mod_test.la: mod_test.slo $(LOCAL_LIBS)
-	$(LINK) --mode=link $(COMPILE) -rpath `pwd` -avoid-version -module mod_test.lo $(LT_LDFLAGS) $(ALL_LDFLAGS) -o $@
+	$(LIBTOOL) --mode=link $(COMPILE) -rpath `pwd` -avoid-version -module mod_test.lo $(LT_LDFLAGS) $(ALL_LDFLAGS) -o $@
 
 libmod_test.la: mod_test.slo $(LOCAL_LIBS)
-	$(LINK) --mode=link $(COMPILE) -rpath `pwd` -avoid-version mod_test.lo $(LT_LDFLAGS) $(ALL_LDFLAGS) -o $@
+	$(LIBTOOL) --mode=link $(COMPILE) -rpath `pwd` -avoid-version mod_test.lo $(LT_LDFLAGS) $(ALL_LDFLAGS) -o $@
 
 testlockperf@EXEEXT@: testlockperf.lo $(LOCAL_LIBS)
 	$(LINK) testlockperf.lo $(LOCAL_LIBS) $(ALL_LIBS)
@@ -103,10 +115,10 @@ TESTS = testall.lo testtime.lo teststr.lo testvsn.lo testipsub.lo \
 	testdso.lo testoc.lo testdup.lo testsockets.lo testproc.lo \
 	testpoll.lo testlock.lo testsockopt.lo testpipe.lo testthread.lo \
 	testhash.lo testargs.lo testnames.lo testuser.lo testpath.lo \
-	testenv.lo
+	testenv.lo testprocmutex.lo
 
 testall: $(TESTS) mod_test.la libmod_test.la occhild@EXEEXT@ \
-	 CuTest.lo proc_child@EXEEXT@ $(LOCAL_LIBS)
+	 readchild@EXEEXT@ CuTest.lo proc_child@EXEEXT@ $(LOCAL_LIBS)
 	$(LINK) $(TESTS) CuTest.lo $(LOCAL_LIBS) $(ALL_LIBS)
 
 

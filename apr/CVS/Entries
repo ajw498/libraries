@@ -21,19 +21,20 @@ D/test////
 D/threadproc////
 D/time////
 D/user////
-/.cvsignore/1.16/Thu Apr  3 19:09:45 2003//
-/CHANGES/1.395/Thu Apr  3 19:46:10 2003//
-/Makefile.in/1.86/Thu Apr  3 19:09:52 2003//
-/NWGNUmakefile/1.15/Thu Apr  3 19:09:36 2003//
-/README.dev/1.3/Thu Apr  3 19:09:53 2003//
-/STATUS/1.189/Thu Apr  3 19:46:10 2003//
-/acconfig.h/1.64/Thu Apr  3 19:09:36 2003//
-/apr-config.in/1.32/Thu Apr  3 19:46:11 2003//
-/apr.dsp/1.124/Thu Apr  3 19:09:48 2003//
-/apr.dsw/1.4/Thu Apr  3 19:09:39 2003//
-/buildconf/1.25/Thu Apr  3 19:09:35 2003//
-/config.layout/1.4/Thu Apr  3 19:09:53 2003//
-/configure.in/1.523/Thu Apr  3 19:46:11 2003//
-/libapr.dsp/1.90/Thu Apr  3 19:09:49 2003//
-/libaprnw.mcp.zip/1.30/Thu Apr  3 19:09:50 2003/-kb/
-/renames_pending/1.17/Thu Apr  3 19:09:50 2003//
+/.cvsignore/1.16/Sat Jan  4 21:04:52 2003//
+/LICENSE/1.1/Mon Apr 28 19:32:39 2003//
+/README.dev/1.3/Sat Jan  4 21:09:26 2003//
+/acconfig.h/1.64/Thu Mar 13 20:46:53 2003//
+/apr.dsw/1.4/Thu Mar 13 20:46:53 2003//
+/config.layout/1.4/Thu Mar 13 20:46:53 2003//
+/libaprnw.mcp.zip/1.30/Sat Jan  4 21:03:52 2003/-kb/
+/renames_pending/1.17/Sat Jan  4 21:04:08 2003//
+/CHANGES/1.436/Sun Oct 26 15:01:49 2003//
+/Makefile.in/1.88/Sun Oct 26 15:01:49 2003//
+/NWGNUmakefile/1.17/Sun Oct 26 15:01:49 2003//
+/STATUS/1.192/Sun Oct 26 15:01:49 2003//
+/apr-config.in/1.36/Sun Oct 26 15:01:49 2003//
+/apr.dsp/1.127/Sun Oct 26 15:01:49 2003//
+/buildconf/1.26/Sun Oct 26 15:01:49 2003//
+/configure.in/1.545/Sun Oct 26 15:01:49 2003//
+/libapr.dsp/1.93/Sun Oct 26 15:01:49 2003//

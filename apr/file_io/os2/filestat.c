@@ -205,22 +205,20 @@ APR_DECLARE(apr_status_t) apr_stat(apr_finfo_t *finfo, const char *fname,
 
 
 
-APR_DECLARE(apr_status_t) apr_lstat(apr_finfo_t *finfo, const char *fname,
-                                    apr_int32_t wanted, apr_pool_t *cont)
-{
-    return apr_stat(finfo, fname, wanted, cont);
-}
-
-
-
 APR_DECLARE(apr_status_t) apr_file_attrs_set(const char *fname,
                                              apr_fileattrs_t attributes,
                                              apr_fileattrs_t attr_mask,
                                              apr_pool_t *cont)
 {
     FILESTATUS3 fs3;
-    ULONG rc = DosQueryPathInfo(fname, FIL_STANDARD, &fs3, sizeof(fs3));
+    ULONG rc;
 
+    /* Don't do anything if we can't handle the requested attributes */
+    if (!(attr_mask & (APR_FILE_ATTR_READONLY
+                       | APR_FILE_ATTR_HIDDEN)))
+        return APR_SUCCESS;
+
+    rc = DosQueryPathInfo(fname, FIL_STANDARD, &fs3, sizeof(fs3));
     if (rc == 0) {
         ULONG old_attr = fs3.attrFile;
 
@@ -233,10 +231,28 @@ APR_DECLARE(apr_status_t) apr_file_attrs_set(const char *fname,
             }
         }
 
+        if (attr_mask & APR_FILE_ATTR_HIDDEN)
+        {
+            if (attributes & APR_FILE_ATTR_HIDDEN) {
+                fs3.attrFile |= FILE_HIDDEN;
+            } else {
+                fs3.attrFile &= ~FILE_HIDDEN;
+            }
+        }
+
         if (fs3.attrFile != old_attr) {
             rc = DosSetPathInfo(fname, FIL_STANDARD, &fs3, sizeof(fs3), 0);
         }
     }
 
     return APR_FROM_OS_ERROR(rc);
+}
+
+
+/* ### Somebody please write this! */
+APR_DECLARE(apr_status_t) apr_file_mtime_set(const char *fname,
+                                              apr_time_t mtime,
+                                              apr_pool_t *pool)
+{
+  return APR_ENOTIMPL;
 }

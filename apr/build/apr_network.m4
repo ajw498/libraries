@@ -57,6 +57,40 @@ if test "$ac_cv_working_getaddrinfo" = "yes"; then
 fi
 ])
 
+dnl Check whether the AI_ADDRCONFIG flag can be used with getaddrinfo
+AC_DEFUN(APR_CHECK_GETADDRINFO_ADDRCONFIG, [
+  AC_CACHE_CHECK(for working AI_ADDRCONFIG, apr_cv_gai_addrconfig, [
+  AC_TRY_RUN([
+#ifdef HAVE_NETDB_H
+#include <netdb.h>
+#endif
+#ifdef HAVE_STRING_H
+#include <string.h>
+#endif
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+
+int main(int argc, char **argv) {
+    struct addrinfo hints, *ai;
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_ADDRCONFIG;
+    return getaddrinfo("localhost", NULL, &hints, &ai) != 0;
+}], [apr_cv_gai_addrconfig=yes], 
+    [apr_cv_gai_addrconfig=no],
+    [apr_cv_gai_addrconfig=no])])
+
+if test $apr_cv_gai_addrconfig = yes; then
+   AC_DEFINE(HAVE_GAI_ADDRCONFIG, 1, [Define if getaddrinfo accepts the AI_ADDRCONFIG flag])
+fi
+])
+
 dnl
 dnl check for working getnameinfo()
 dnl
@@ -141,32 +175,69 @@ fi
 ])
 
 dnl
-dnl check for presence of  retrans/retry variables in the res_state structure
+dnl check for getnameinfo() that properly resolves IPv4-mapped IPv6 addresses
 dnl
-AC_DEFUN(APR_CHECK_RESOLV_RETRANS,[
-  AC_CACHE_CHECK(for presence of retrans/retry fields in res_state/resolv.h , ac_cv_retransretry,[
+dnl Darwin is known not to map them correctly
+dnl
+AC_DEFUN(APR_CHECK_GETNAMEINFO_IPV4_MAPPED,[
+  AC_CACHE_CHECK(whether getnameinfo resolves IPv4-mapped IPv6 addresses,
+                 ac_cv_getnameinfo_ipv4_mapped,[
   AC_TRY_RUN( [
-#include <sys/types.h>
-#if defined(__sun__)
-#include <inet/ip.h>
+#ifdef HAVE_NETDB_H
+#include <netdb.h>
 #endif
-#include <resolv.h>
-/* _res is a global defined in resolv.h */
-int main(void) {
-    _res.retrans = 2;
-    _res.retry = 1;
-    exit(0);
-    return 0;
+#ifdef HAVE_STRING_H
+#include <string.h>
+#endif
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+
+void main(void) {
+    struct sockaddr_in6 sa = {0};
+    struct in_addr ipv4;
+    char hbuf[NI_MAXHOST];
+    unsigned int *addr32;
+    int error;
+
+    ipv4.s_addr = inet_addr("127.0.0.1");
+
+    sa.sin6_family = AF_INET6;
+    sa.sin6_port = 0;
+
+    addr32 = (unsigned int *)&sa.sin6_addr;
+    addr32[2] = htonl(0x0000FFFF);
+    addr32[3] = ipv4.s_addr;
+
+#ifdef SIN6_LEN
+    sa.sin6_len = sizeof(sa);
+#endif
+
+    error = getnameinfo((const struct sockaddr *)&sa, sizeof(sa),
+                        hbuf, sizeof(hbuf), NULL, 0,
+                        NI_NAMEREQD);
+    if (error) {
+        exit(1);
+    } else {
+        exit(0);
+    }
 }
 ],[
-  ac_cv_retransretry="yes"
+  ac_cv_getnameinfo_ipv4_mapped="yes"
 ],[
-  ac_cv_retransretry="no"
+  ac_cv_getnameinfo_ipv4_mapped="no"
 ],[
-  ac_cv_retransretry="no"
+  ac_cv_getnameinfo_ipv4_mapped="yes"
 ])])
-if test "$ac_cv_retransretry" = "yes"; then
-  AC_DEFINE(RESOLV_RETRANSRETRY, 1, [Define if resolv.h's res_state has the fields retrans/rety])
+if test "$ac_cv_getnameinfo_ipv4_mapped" = "no"; then
+  AC_DEFINE(GETNAMEINFO_IPV4_MAPPED_FAILS, 1,
+            [Define if getnameinfo does not map IPv4 address correctly])
 fi
 ])
 
@@ -539,7 +610,29 @@ else
 fi
 ])
 
+dnl Check for presence of struct sockaddr_storage.
+AC_DEFUN(APR_CHECK_SOCKADDR_STORAGE,[
+AC_CACHE_CHECK(for sockaddr_storage, apr_cv_define_sockaddr_storage,[
+AC_TRY_COMPILE([
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+],[struct sockaddr_storage sa;],
+[apr_cv_define_sockaddr_storage=yes],
+[apr_cv_define_sockaddr_storage=no])])
 
+if test "$apr_cv_define_sockaddr_storage" = "yes"; then
+  have_sa_storage=1
+else
+  have_sa_storage=0
+fi
+AC_SUBST(have_sa_storage)
+])
+
+dnl Check for presence of struct sockaddr_in6.
 AC_DEFUN(APR_CHECK_SOCKADDR_IN6,[
 AC_CACHE_CHECK(for sockaddr_in6, ac_cv_define_sockaddr_in6,[
 AC_TRY_COMPILE([
@@ -564,72 +657,6 @@ else
   have_sockaddr_in6=0
 fi
 ])
-
-
-dnl
-dnl Check to see if this platform includes sa_len in it's
-dnl struct sockaddr.  If it does it changes the length of sa_family
-dnl which could cause us problems
-dnl
-AC_DEFUN(APR_CHECK_SOCKADDR_SA_LEN,[
-AC_CACHE_CHECK(for sockaddr sa_len, ac_cv_define_sockaddr_sa_len,[
-AC_TRY_COMPILE([
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#endif
-],[
-struct sockaddr_in sai;
-int i = sai.sin_len;
-],[
-  ac_cv_define_sockaddr_sa_len=yes
-],[
-  ac_cv_define_sockaddr_sa_len=no
-])
-])
-
-if test "$ac_cv_define_sockaddr_sa_len" = "yes"; then
-  AC_DEFINE(HAVE_SOCKADDR_SA_LEN, 1 ,[Define if we have length field in sockaddr_in])
-fi
-])
-
-
-dnl
-dnl APR_INADDR_NONE
-dnl
-dnl checks for missing INADDR_NONE macro
-dnl
-AC_DEFUN(APR_INADDR_NONE,[
-  AC_CACHE_CHECK(whether system defines INADDR_NONE, ac_cv_inaddr_none,[
-  AC_TRY_COMPILE([
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-#ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
-#endif
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#endif
-#ifdef HAVE_ARPA_INET_H
-#include <arpa/inet.h>
-#endif
-],[
-unsigned long foo = INADDR_NONE;
-],[
-    ac_cv_inaddr_none=yes
-],[
-    ac_cv_inaddr_none=no
-])])
-  if test "$ac_cv_inaddr_none" = "no"; then
-    apr_inaddr_none="((unsigned int) 0xffffffff)"
-  else
-    apr_inaddr_none="INADDR_NONE"
-  fi
-])
-
 
 dnl
 dnl APR_H_ERRNO_COMPILE_CHECK

@@ -147,12 +147,6 @@ typedef int               apr_signum_t;
 #define APR_OFFSETOF(s_type,field) APR_OFFSET(s_type*,field)
 #endif
 
-/** @deprecated @see APR_OFFSET */
-#define APR_XtOffset APR_OFFSET
-
-/** @deprecated @see APR_OFFSETOF */
-#define APR_XtOffsetOf APR_OFFSETOF
-
 #ifndef DOXYGEN
 
 /* A couple of prototypes for functions in case some platform doesn't 
@@ -267,15 +261,10 @@ APR_DECLARE(void) apr_terminate2(void);
 /**
  * Generate random bytes.
  * @param buf Buffer to fill with random bytes
- * @param length Length of buffer in bytes (becomes apr_size_t in APR 1.0)
+ * @param length Length of buffer in bytes
  */
-#ifdef APR_ENABLE_FOR_1_0
 APR_DECLARE(apr_status_t) apr_generate_random_bytes(unsigned char * buf, 
                                                     apr_size_t length);
-#else
-APR_DECLARE(apr_status_t) apr_generate_random_bytes(unsigned char * buf, 
-                                                    int length);
-#endif
 
 #endif
 /** @} */

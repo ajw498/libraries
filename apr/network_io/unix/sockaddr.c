@@ -369,11 +369,48 @@ static apr_status_t call_resolver(apr_sockaddr_t **sa,
     struct addrinfo hints, *ai, *ai_list;
     apr_sockaddr_t *prev_sa;
     int error;
+    char *servname = NULL; 
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = family;
     hints.ai_socktype = SOCK_STREAM;
-    error = getaddrinfo(hostname, NULL, &hints, &ai_list);
+#ifdef HAVE_GAI_ADDRCONFIG
+    if (family == AF_UNSPEC) {
+        /* By default, only look up addresses using address types for
+         * which a local interface is configured, i.e. no IPv6 if no
+         * IPv6 interfaces configured. */
+        hints.ai_flags = AI_ADDRCONFIG;
+    }
+#endif
+    if(hostname == NULL) {
+#ifdef AI_PASSIVE 
+        /* If hostname is NULL, assume we are trying to bind to all
+         * interfaces. */
+        hints.ai_flags |= AI_PASSIVE;
+#endif
+        /* getaddrinfo according to RFC 2553 must have either hostname
+         * or servname non-NULL.
+         */
+#ifdef _AIX
+        /* But current AIX getaddrinfo() doesn't like servname = "0";
+         * the "1" won't hurt since we use the port parameter to fill
+         * in the returned socket addresses later
+         */
+        if (!port) {
+            servname = "1";
+        }
+        else
+#endif
+        servname = apr_itoa(p, port);
+    }
+    error = getaddrinfo(hostname, servname, &hints, &ai_list);
+#ifdef HAVE_GAI_ADDRCONFIG
+    if (error == EAI_BADFLAGS && family == AF_UNSPEC) {
+        /* Retry with no flags if AI_ADDRCONFIG was rejected. */
+        hints.ai_flags = 0;
+        error = getaddrinfo(hostname, servname, &hints, &ai_list);
+    }
+#endif
     if (error) {
 #ifndef WIN32
         if (error == EAI_SYSTEM) {
@@ -404,10 +441,13 @@ static apr_status_t call_resolver(apr_sockaddr_t **sa,
         apr_sockaddr_vars_set(new_sa, ai->ai_family, port);
 
         if (!prev_sa) { /* first element in new list */
-            new_sa->hostname = apr_pstrdup(p, hostname);
+            if (hostname) {
+                new_sa->hostname = apr_pstrdup(p, hostname);
+            }
             *sa = new_sa;
         }
         else {
+            new_sa->hostname = prev_sa->hostname;
             prev_sa->next = new_sa;
         }
 
@@ -474,6 +514,12 @@ static apr_status_t find_addresses(apr_sockaddr_t **sa,
     struct hostent hs;
     struct in_addr ipaddr;
     char *addr_list[2];
+    const char *orig_hostname = hostname;
+
+    if (hostname == NULL) {
+        /* if we are given a NULL hostname, assume '0.0.0.0' */
+        hostname = "0.0.0.0";
+    }
 
     if (*hostname >= '0' && *hostname <= '9' &&
         strspn(hostname, "0123456789.") == strlen(hostname)) {
@@ -528,10 +574,13 @@ static apr_status_t find_addresses(apr_sockaddr_t **sa,
         apr_sockaddr_vars_set(new_sa, AF_INET, port);
 
         if (!prev_sa) { /* first element in new list */
-            new_sa->hostname = apr_pstrdup(p, hostname);
+            if (orig_hostname) {
+                new_sa->hostname = apr_pstrdup(p, orig_hostname);
+            }
             *sa = new_sa;
         }
         else {
+            new_sa->hostname = prev_sa->hostname;
             prev_sa->next = new_sa;
         }
 
@@ -564,22 +613,18 @@ APR_DECLARE(apr_status_t) apr_sockaddr_info_get(apr_sockaddr_t **sa,
         }
 #endif
     }
-    
-    if (hostname) {
 #if !APR_HAVE_IPV6
-        if (family == APR_UNSPEC) {
-            family = APR_INET;
-        }
-#endif
-        return find_addresses(sa, hostname, family, port, flags, p);
+    /* What may happen is that APR is not IPv6-enabled, but we're still
+     * going to call getaddrinfo(), so we have to tell the OS we only
+     * want IPv4 addresses back since we won't know what to do with
+     * IPv6 addresses.
+     */
+    if (family == APR_UNSPEC) {
+        family = APR_INET;
     }
+#endif
 
-    *sa = apr_pcalloc(p, sizeof(apr_sockaddr_t));
-    (*sa)->pool = p;
-    apr_sockaddr_vars_set(*sa, 
-                          family == APR_UNSPEC ? APR_INET : family,
-                          port);
-    return APR_SUCCESS;
+    return find_addresses(sa, hostname, family, port, flags, p);
 }
 
 APR_DECLARE(apr_status_t) apr_getnameinfo(char **hostname,
@@ -597,10 +642,29 @@ APR_DECLARE(apr_status_t) apr_getnameinfo(char **hostname,
     /* don't know if it is portable for getnameinfo() to set h_errno;
      * clear it then see if it was set */
     SET_H_ERRNO(0);
+
     /* default flags are NI_NAMREQD; otherwise, getnameinfo() will return
      * a numeric address string if it fails to resolve the host name;
      * that is *not* what we want here
+     *
+     * Additionally, if we know getnameinfo() doesn't handle IPv4-mapped
+     * IPv6 addresses correctly, drop down to IPv4 before calling
+     * getnameinfo().
      */
+#ifdef GETNAMEINFO_IPV4_MAPPED_FAILS
+    if (sockaddr->family == AF_INET6 &&
+        IN6_IS_ADDR_V4MAPPED(&sockaddr->sa.sin6.sin6_addr)) {
+        struct apr_sockaddr_t tmpsa;
+        tmpsa.sa.sin.sin_family = AF_INET;
+        tmpsa.sa.sin.sin_addr.s_addr = ((uint32_t *)sockaddr->ipaddr_ptr)[3];
+
+        rc = getnameinfo((const struct sockaddr *)&tmpsa.sa,
+                         sizeof(struct sockaddr_in),
+                         tmphostname, sizeof(tmphostname), NULL, 0,
+                         flags != 0 ? flags : NI_NAMEREQD);
+    }
+    else
+#endif
     rc = getnameinfo((const struct sockaddr *)&sockaddr->sa, sockaddr->salen,
                      tmphostname, sizeof(tmphostname), NULL, 0,
                      flags != 0 ? flags : NI_NAMEREQD);

@@ -143,6 +143,7 @@ extern "C" {
 #define APR_HAVE_SYS_SENDFILE_H 0
 #define APR_HAVE_SYS_SIGNAL_H   0
 #define APR_HAVE_SYS_SOCKET_H   0
+#define APR_HAVE_SYS_SOCKIO_H   0
 #define APR_HAVE_SYS_SYSLIMITS_H 0
 #define APR_HAVE_SYS_TIME_H     0
 #define APR_HAVE_SYS_TYPES_H    1
@@ -226,18 +227,13 @@ extern "C" {
 #define APR_HAS_UNICODE_FS        0
 #define APR_HAS_PROC_INVOKED      0
 #define APR_HAS_USER              1
-#define APR_HAS_LARGE_FILES       0
+#define APR_HAS_LARGE_FILES       1
 #define APR_HAS_XTHREAD_FILES     0
 #define APR_HAS_OS_UUID           0
 
 /* Netware can poll on files/pipes.
  */
 #define APR_FILES_AS_SOCKETS      1
-
-/* Not all platforms have a real INADDR_NONE.  This macro replaces INADDR_NONE
- * on all platforms.
- */
-#define APR_INADDR_NONE           INADDR_NONE
 
 /* This macro indicates whether or not EBCDIC is the native character set.
  */
@@ -266,7 +262,7 @@ typedef  unsigned long long apr_uint64_t;
 
 typedef  size_t            apr_size_t;
 typedef  ssize_t           apr_ssize_t;
-typedef  off_t             apr_off_t;
+typedef  off64_t           apr_off_t;
 typedef  int               apr_socklen_t;
 
 #ifdef UNKNOWN_NETWARE_64BIT_FLAG_NEEDED
@@ -359,9 +355,8 @@ typedef int apr_wait_t;
 #define APR_PATH_MAX PATH_MAX
 
 #define APR_INT64_T_FMT          "lld"
-#define APR_INT64_T_FMT_LEN      3
 #define APR_UINT64_T_FMT         "llu"
-#define APR_UINT64_T_FMT_LEN     3
+#define APR_UINT64_T_HEX_FMT     "llx"
 #define APR_TIME_T_FMT APR_INT64_T_FMT
 
 /* Deal with atoi64 variables ... these should move to apr_private.h */

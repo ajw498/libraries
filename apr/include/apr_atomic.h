@@ -104,24 +104,28 @@ apr_status_t apr_atomic_init(apr_pool_t *p);
  * @param mem the pointer
  * @warning on certain platforms this number is not stored
  * directly in the pointer. in others it is 
+ * @deprecated
  */
 apr_uint32_t apr_atomic_read(volatile apr_atomic_t *mem);
 /**
  * set the value for atomic.
  * @param mem the pointer
  * @param val the value
+ * @deprecated
  */
 void apr_atomic_set(volatile apr_atomic_t *mem, apr_uint32_t val);
 /**
  * Add 'val' to the atomic variable
  * @param mem pointer to the atomic value
  * @param val the addition
+ * @deprecated
  */
 void apr_atomic_add(volatile apr_atomic_t *mem, apr_uint32_t val);
 
 /**
  * increment the atomic variable by 1
  * @param mem pointer to the atomic value
+ * @deprecated
  */
 void apr_atomic_inc(volatile apr_atomic_t *mem);
 
@@ -129,6 +133,7 @@ void apr_atomic_inc(volatile apr_atomic_t *mem);
  * decrement the atomic variable by 1
  * @param mem pointer to the atomic value
  * @return zero if the value is zero, otherwise non-zero
+ * @deprecated
  */
 int apr_atomic_dec(volatile apr_atomic_t *mem);
 
@@ -140,9 +145,75 @@ int apr_atomic_dec(volatile apr_atomic_t *mem);
  * @param cmp the value to compare it to
  * @return the old value of the atomic
  * @warning do not mix apr_atomic's with the CAS function.
+ * @deprecated
  * on some platforms they may be implemented by different mechanisms
  */
 apr_uint32_t apr_atomic_cas(volatile apr_uint32_t *mem, long with, long cmp);
+
+
+/*
+ * Atomic operations on 32-bit values
+ * Note: Each of these functions internally implements a memory barrier
+ * on platforms that require it
+ */
+
+/**
+ * atomically read an apr_uint32_t from memory
+ * @param mem the pointer
+ */
+apr_uint32_t apr_atomic_read32(volatile apr_uint32_t *mem);
+
+/**
+ * atomically set an apr_uint32_t in memory
+ * @param mem pointer to the object
+ */
+void apr_atomic_set32(volatile apr_uint32_t *mem, apr_uint32_t val);
+
+/**
+ * atomically add 'val' to an apr_uint32_t
+ * @param mem pointer to the object
+ * @param val amount to add
+ */
+void apr_atomic_add32(volatile apr_uint32_t *mem, apr_uint32_t val);
+
+/**
+ * atomically subtract 'val' from an apr_uint32_t
+ * @param mem pointer to the object
+ * @param val amount to subtract
+ */
+void apr_atomic_sub32(volatile apr_uint32_t *mem, apr_uint32_t val);
+
+/**
+ * atomically increment an apr_uint32_t by 1
+ * @param mem pointer to the object
+ */
+void apr_atomic_inc32(volatile apr_uint32_t *mem);
+
+/**
+ * atomically decrement an apr_uint32_t by 1
+ * @param mem pointer to the atomic value
+ * @return zero if the value becomes zero on decrement, otherwise non-zero
+ */
+int apr_atomic_dec32(volatile apr_uint32_t *mem);
+
+/**
+ * compare an apr_uint32_t's value with 'cmp'.
+ * If they are the same swap the value with 'with'
+ * @param mem pointer to the value
+ * @param with what to swap it with
+ * @param cmp the value to compare it to
+ * @return the old value of *mem
+ */
+apr_uint32_t apr_atomic_cas32(volatile apr_uint32_t *mem, apr_uint32_t with,
+                              apr_uint32_t cmp);
+
+/**
+ * exchange an apr_uint32_t's value with 'val'.
+ * @param mem pointer to the value
+ * @param val what to swap it with
+ * @return the old value of *mem
+ */
+apr_uint32_t apr_atomic_xchg32(volatile apr_uint32_t *mem, apr_uint32_t val);
 
 /**
  * compare the pointer's value with cmp.
@@ -164,36 +235,74 @@ void *apr_atomic_casptr(volatile void **mem, void *with, const void *cmp);
 
 #if defined(WIN32)
 
-typedef LONG apr_atomic_t;
+#define apr_atomic_t LONG
 
+#define apr_atomic_init(pool)        APR_SUCCESS
 #define apr_atomic_add(mem, val)     InterlockedExchangeAdd(mem,val)
-#define apr_atomic_dec(mem)          InterlockedDecrement(mem)
 #define apr_atomic_inc(mem)          InterlockedIncrement(mem)
+#define apr_atomic_dec(mem)          InterlockedDecrement(mem)
 #define apr_atomic_set(mem, val)     InterlockedExchange(mem, val)
 #define apr_atomic_read(mem)         (*mem)
 #define apr_atomic_cas(mem,with,cmp) InterlockedCompareExchange(mem,with,cmp)
-#define apr_atomic_init(pool)        APR_SUCCESS
 #define apr_atomic_casptr(mem,with,cmp) InterlockedCompareExchangePointer(mem,with,cmp)
+
+/* 
+ * Remapping function pointer type to accept apr_uint32_t's type-safely
+ * as the arguments for as our apr_atomic_foo32 Functions
+ */
+typedef WINBASEAPI apr_uint32_t (WINAPI apr_atomic_win32_ptr_fn)
+                                           (apr_uint32_t volatile *);
+typedef WINBASEAPI apr_uint32_t (WINAPI apr_atomic_win32_ptr_val_fn)
+                                           (apr_uint32_t volatile *, 
+                                            apr_uint32_t);
+typedef WINBASEAPI apr_uint32_t (WINAPI apr_atomic_win32_ptr_val_val_fn)
+                                           (apr_uint32_t volatile *, 
+                                            apr_uint32_t, apr_uint32_t);
+
+#define apr_atomic_add32(mem, val)      \
+    ((apr_atomic_win32_ptr_val_fn)InterlockedExchangeAdd)(mem,val)
+#define apr_atomic_sub32(mem, val)      \
+    ((apr_atomic_win32_ptr_val_fn)InterlockedExchangeSub)(mem,val)
+#define apr_atomic_inc32(mem)           \
+    ((apr_atomic_win32_ptr_fn)InterlockedIncrement)(mem)
+#define apr_atomic_dec32(mem)           \
+    ((apr_atomic_win32_ptr_fn)InterlockedDecrement)(mem)
+#define apr_atomic_set32(mem, val)      \
+    ((apr_atomic_win32_ptr_val_fn)InterlockedExchange)(mem,val)
+#define apr_atomic_read32(mem)          (*mem)
+#define apr_atomic_cas32(mem,with,cmp)  \
+    ((apr_atomic_win32_ptr_val_val_fn)InterlockedCompareExchange)(mem,val)
+#define apr_atomic_xchg32(mem,val)      \
+    ((apr_atomic_win32_ptr_val_fn)InterlockedExchange)(mem,val)
 
 #elif defined(NETWARE)
 
-#define apr_atomic_t unsigned long
-
-#define apr_atomic_add(mem, val)     atomic_add(mem,val)
-#define apr_atomic_inc(mem)          atomic_inc(mem)
-#define apr_atomic_set(mem, val)     (*mem = val)
-#define apr_atomic_read(mem)         (*mem)
-#define apr_atomic_init(pool)        APR_SUCCESS
-#define apr_atomic_cas(mem,with,cmp) atomic_cmpxchg((unsigned long *)(mem),(unsigned long)(cmp),(unsigned long)(with))
+#define apr_atomic_init(pool)           APR_SUCCESS
+#define apr_atomic_add32(mem, val)      atomic_add((unsigned long *)(mem),(unsigned long)(val))
+#define apr_atomic_sub32(mem, val)      atomic_sub((unsigned long *)(mem),(unsigned long)(val))
+#define apr_atomic_inc32(mem)           atomic_inc((unsigned long *)(mem))
+#define apr_atomic_set32(mem, val)      (*mem = val)
+#define apr_atomic_read32(mem)          (*mem)
+#define apr_atomic_cas32(mem,with,cmp)  atomic_cmpxchg((unsigned long *)(mem),(unsigned long)(cmp),(unsigned long)(with))
+#define apr_atomic_xchg32(mem, val)     atomic_xchg((unsigned long *)(mem),(unsigned long)val)
     
-int apr_atomic_dec(apr_atomic_t *mem);
+int apr_atomic_dec32(apr_uint32_t *mem);
 void *apr_atomic_casptr(void **mem, void *with, const void *cmp);
-#define APR_OVERRIDE_ATOMIC_DEC 1
+
+#define APR_OVERRIDE_ATOMIC_READ32  1
+#define APR_OVERRIDE_ATOMIC_SET32   1
+#define APR_OVERRIDE_ATOMIC_ADD32   1
+#define APR_OVERRIDE_ATOMIC_SUB32   1
+#define APR_OVERRIDE_ATOMIC_INC32   1
+#define APR_OVERRIDE_ATOMIC_DEC32   1
+#define APR_OVERRIDE_ATOMIC_CAS32   1
+#define APR_OVERRIDE_ATOMIC_XCHG32  1
+
 #define APR_OVERRIDE_ATOMIC_CASPTR 1
 
-inline int apr_atomic_dec(apr_atomic_t *mem) 
+inline int apr_atomic_dec32(apr_uint32_t *mem) 
 {
-    atomic_dec(mem);
+    atomic_dec((unsigned long *)mem);
     return *mem; 
 }
 
@@ -201,6 +310,20 @@ inline void *apr_atomic_casptr(void **mem, void *with, const void *cmp)
 {
     return (void*)atomic_cmpxchg((unsigned long *)mem,(unsigned long)cmp,(unsigned long)with);
 }
+
+#define apr_atomic_read(mem)            apr_atomic_read32(mem)
+#define apr_atomic_set(mem, val)        apr_atomic_set32(mem, val)
+#define apr_atomic_add(mem, val)        apr_atomic_add32(mem,val)
+#define apr_atomic_inc(mem)             apr_atomic_inc32(mem)
+#define apr_atomic_dec(mem)             apr_atomic_dec32(mem)
+#define apr_atomic_cas(mem,with,cmp)    apr_atomic_cas32(mem,with,cmp)
+
+#define APR_OVERRIDE_ATOMIC_READ    1
+#define APR_OVERRIDE_ATOMIC_SET     1
+#define APR_OVERRIDE_ATOMIC_ADD     1
+#define APR_OVERRIDE_ATOMIC_INC     1
+#define APR_OVERRIDE_ATOMIC_DEC     1
+#define APR_OVERRIDE_ATOMIC_CAS     1
 
 #elif defined(__FreeBSD__)
 
@@ -210,6 +333,12 @@ inline void *apr_atomic_casptr(void **mem, void *with, const void *cmp)
 #define apr_atomic_inc(mem)          atomic_add_int(mem,1)
 #define apr_atomic_set(mem, val)     atomic_set_int(mem, val)
 #define apr_atomic_read(mem)         (*mem)
+
+#define apr_atomic_add32(mem, val)        apr_atomic_add(mem, val)
+#define apr_atomic_dec32(mem)             apr_atomic_dec(mem)
+#define apr_atomic_inc32(mem)             apr_atomic_inc(mem)
+#define apr_atomic_set32(mem)             apr_atomic_set(mem)
+#define apr_atomic_read32(mem)            apr_atomic_read(mem)
 
 #elif (defined(__linux__) || defined(__EMX__)) && defined(__i386__) && !APR_FORCE_ATOMIC_GENERIC
 
@@ -223,45 +352,54 @@ inline void *apr_atomic_casptr(void **mem, void *with, const void *cmp)
     prev;})
 
 #define apr_atomic_add(mem, val)                                \
-({ register apr_atomic_t last;                                  \
-   do {                                                         \
-       last = *(mem);                                           \
-   } while (apr_atomic_cas((mem), last + (val), last) != last); \
-  })
+ asm volatile ("lock; addl %1, %0"                              \
+    :                                                           \
+    : "m" (*(mem)), "r" (val)                                   \
+    : "memory")
+
+#define apr_atomic_sub(mem, val)                                \
+ asm volatile ("lock; subl %1, %0"                              \
+    :                                                           \
+    : "m" (*(mem)), "r" (val)                                   \
+    : "memory")
 
 #define apr_atomic_dec(mem)                                     \
-({ register apr_atomic_t last;                                  \
-   do {                                                         \
-       last = *(mem);                                           \
-   } while (apr_atomic_cas((mem), last - 1, last) != last);     \
-  (--last != 0); })
+({ int prev;                                                    \
+   asm volatile ("mov $0, %%eax;\n\t"                           \
+                 "lock; decl %1;\n\t"                           \
+                 "setnz %%al;\n\t"                              \
+                 "mov %%eax, %0"                                \
+                 : "=r" (prev)                                  \
+                 : "m" (*(mem))                                 \
+                 : "memory", "%eax");                           \
+   prev;})
 
 #define apr_atomic_inc(mem)                                     \
-({ register apr_atomic_t last;                                  \
-   do {                                                         \
-       last = *(mem);                                           \
-   } while (apr_atomic_cas((mem), last + 1, last) != last);     \
-  })
+ asm volatile ("lock; incl %0"                                  \
+    :                                                           \
+    : "m" (*(mem))                                              \
+    : "memory")
 
 #define apr_atomic_set(mem, val)     (*(mem) = val)
 #define apr_atomic_read(mem)        (*(mem))
-#define apr_atomic_init(pool)        APR_SUCCESS
 
-#elif (defined(__sparc__) || defined(sparc)) && !APR_FORCE_ATOMIC_GENERIC
+#define apr_atomic_cas32(mem, with, cmp)  apr_atomic_cas(mem, with, cmp)
+#define apr_atomic_add32(mem, val)        apr_atomic_add(mem, val)
+#define apr_atomic_sub32(mem, val)        apr_atomic_sub(mem, val)
+#define apr_atomic_dec32(mem)             apr_atomic_dec(mem)
+#define apr_atomic_inc32(mem)             apr_atomic_inc(mem)
+#define apr_atomic_set32(mem, val)        apr_atomic_set(mem, val)
+#define apr_atomic_read32(mem)            apr_atomic_read(mem)
 
-#define apr_atomic_t apr_uint32_t
-#define apr_atomic_read(p)  *p
+#define apr_atomic_xchg32(mem,val) \
+({ apr_uint32_t prev = val; \
+    asm volatile ("lock; xchgl %0, %1"              \
+         : "=r" (prev)               \
+         : "m" (*(mem)), "0"(prev) \
+         : "memory"); \
+    prev;})
 
-#define apr_atomic_add(mem, val)     apr_atomic_add_sparc(mem,val)
-#define apr_atomic_dec(mem)          apr_atomic_sub_sparc(mem,1)
-#define apr_atomic_inc(mem)          apr_atomic_add_sparc(mem,1)
-#define apr_atomic_cas(mem,val,cond) apr_atomic_cas_sparc(mem,val,cond)
-#define apr_atomic_set(mem, val)     (*mem = val)
-#define apr_atomic_init(pool)        APR_SUCCESS
-
-apr_uint32_t apr_atomic_add_sparc(volatile apr_atomic_t *mem, apr_uint32_t add);
-apr_uint32_t apr_atomic_sub_sparc(volatile apr_atomic_t *mem, apr_uint32_t sub);
-apr_uint32_t apr_atomic_cas_sparc(volatile apr_uint32_t *mem, long with, long cmp);
+/*#define apr_atomic_init(pool)        APR_SUCCESS*/
 
 #elif defined(__MVS__) /* OS/390 */
 
@@ -275,7 +413,7 @@ apr_uint32_t apr_atomic_cas(volatile apr_atomic_t *mem, apr_uint32_t swap,
 
 #define apr_atomic_inc(mem)          apr_atomic_add(mem, 1)
 #define apr_atomic_dec(mem)          apr_atomic_add(mem, -1)
-#define apr_atomic_init(pool)        APR_SUCCESS
+/*#define apr_atomic_init(pool)        APR_SUCCESS*/
 
 /* warning: the following two operations, _read and _set, are atomic
  * if the memory variables are aligned (the usual case).  
@@ -339,6 +477,46 @@ apr_uint32_t apr_atomic_cas(volatile apr_uint32_t *mem,long with,long cmp);
 #define APR_ATOMIC_NEED_DEFAULT_INIT 1
 #endif
 
+#if !defined(apr_atomic_read32) && !defined(APR_OVERRIDE_ATOMIC_READ32)
+#define apr_atomic_read32(p)  *p
+#endif
+
+#if !defined(apr_atomic_set32) && !defined(APR_OVERRIDE_ATOMIC_SET32)
+void apr_atomic_set32(volatile apr_uint32_t *mem, apr_uint32_t val);
+#define APR_ATOMIC_NEED_DEFAULT_INIT 1
+#endif
+
+#if !defined(apr_atomic_add32) && !defined(APR_OVERRIDE_ATOMIC_ADD32)
+void apr_atomic_add32(volatile apr_uint32_t *mem, apr_uint32_t val);
+#define APR_ATOMIC_NEED_DEFAULT_INIT 1
+#endif
+
+#if !defined(apr_atomic_sub32) && !defined(APR_OVERRIDE_ATOMIC_SUB32)
+void apr_atomic_sub32(volatile apr_uint32_t *mem, apr_uint32_t val);
+#define APR_ATOMIC_NEED_DEFAULT_INIT 1
+#endif
+
+#if !defined(apr_atomic_inc32) && !defined(APR_OVERRIDE_ATOMIC_INC32)
+void apr_atomic_inc32(volatile apr_uint32_t *mem);
+#define APR_ATOMIC_NEED_DEFAULT_INIT 1
+#endif
+
+#if !defined(apr_atomic_dec32) && !defined(APR_OVERRIDE_ATOMIC_DEC32)
+int apr_atomic_dec32(volatile apr_uint32_t *mem);
+#define APR_ATOMIC_NEED_DEFAULT_INIT 1
+#endif
+
+#if !defined(apr_atomic_cas32) && !defined(APR_OVERRIDE_ATOMIC_CAS32)
+apr_uint32_t apr_atomic_cas32(volatile apr_uint32_t *mem, apr_uint32_t with,
+			      apr_uint32_t cmp);
+#define APR_ATOMIC_NEED_DEFAULT_INIT 1
+#endif
+
+#if !defined(apr_atomic_xchg32) && !defined(APR_OVERRIDE_ATOMIC_XCHG32)
+apr_uint32_t apr_atomic_xchg32(volatile apr_uint32_t *mem, apr_uint32_t val);
+#define APR_ATOMIC_NEED_DEFAULT_INIT 1
+#endif
+
 #if !defined(apr_atomic_casptr) && !defined(APR_OVERRIDE_ATOMIC_CASPTR)
 #if APR_SIZEOF_VOIDP == 4
 #define apr_atomic_casptr(mem, with, cmp) (void *)apr_atomic_cas((apr_uint32_t *)(mem), (long)(with), (long)cmp)
@@ -358,7 +536,7 @@ void *apr_atomic_casptr(volatile void **mem, void *with, const void *cmp);
  */
 #if APR_ATOMIC_NEED_DEFAULT_INIT
 #if defined(apr_atomic_init) || defined(APR_OVERRIDE_ATOMIC_INIT)
-#error Platform has redefined apr_atomic_init, but other default default atomics require a default apr_atomic_init
+#error Platform has redefined apr_atomic_init, but other default atomics require a default apr_atomic_init
 #endif
 #endif /* APR_ATOMIC_NEED_DEFAULT_INIT */
 

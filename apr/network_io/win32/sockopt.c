@@ -262,19 +262,18 @@ APR_DECLARE(apr_status_t) apr_socket_opt_get(apr_socket_t *sock,
 }
 
 
-/* deprecated */
-APR_DECLARE(apr_status_t) apr_setsocketopt(apr_socket_t *sock,
-                                           apr_int32_t opt, apr_int32_t on)
+APR_DECLARE(apr_status_t) apr_socket_atmark(apr_socket_t *sock, int *atmark)
 {
-    return apr_socket_opt_set(sock, opt, on);
+    u_long oobmark;
+
+    if (ioctlsocket(sock->socketdes, SIOCATMARK, (void*) &oobmark) < 0)
+        return apr_get_netos_error();
+
+    *atmark = (oobmark != 0);
+
+    return APR_SUCCESS;
 }
 
-APR_DECLARE(apr_status_t) apr_getsocketopt(apr_socket_t *sock,
-                                           apr_int32_t opt, apr_int32_t *on)
-{
-    return apr_socket_opt_get(sock, opt, on);
-}
-                                           
 
 APR_DECLARE(apr_status_t) apr_gethostname(char *buf, int len,
                                           apr_pool_t *cont)

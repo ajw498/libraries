@@ -58,7 +58,7 @@
 #include "apr_pools.h"
 #include "apr_signal.h"
 #include "apr_strings.h"
-
+#include <signal.h>
 #include <assert.h>
 #if APR_HAS_THREADS && APR_HAVE_PTHREAD_H
 #include <pthread.h>
@@ -139,8 +139,9 @@ APR_DECLARE(apr_sigfunc_t *) apr_signal(int signo, apr_sigfunc_t * func)
 
 #endif /* HAVE_SIGACTION */
 
-
-#ifdef SYS_SIGLIST_DECLARED
+/* AC_DECL_SYS_SIGLIST defines either of these symbols depending
+ * on the version of autoconf used. */
+#if defined(SYS_SIGLIST_DECLARED) || HAVE_DECL_SYS_SIGLIST
 
 void apr_signal_init(apr_pool_t *pglobal)
 {
@@ -150,7 +151,7 @@ const char *apr_signal_description_get(int signum)
     return sys_siglist[signum];
 }
 
-#else /* !SYS_SIGLIST_DECLARED */
+#else /* !(SYS_SIGLIST_DECLARED || HAVE_DECL_SYS_SIGLIST) */
 
 /* we need to roll our own signal description stuff */
 
@@ -298,7 +299,7 @@ const char *apr_signal_description_get(int signum)
         : "unknown signal (number)";
 }
 
-#endif /* SYS_SIGLIST_DECLARED */
+#endif /* SYS_SIGLIST_DECLARED || HAVE_DECL_SYS_SIGLIST */
 
 #if APR_HAS_THREADS && (HAVE_SIGSUSPEND || APR_HAVE_SIGWAIT) && !defined(OS2)
 
@@ -462,9 +463,3 @@ APR_DECLARE(apr_status_t) apr_setup_signal_thread(void)
 }
 
 #endif
-
-/* Deprecated */
-const char *apr_signal_get_description(int signum)
-{
-    return apr_signal_description_get(signum);
-}

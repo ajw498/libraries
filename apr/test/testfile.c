@@ -104,7 +104,7 @@ static void test_open_read(CuTest *tc)
     rv = apr_file_open(&filetest, FILENAME, 
                        APR_READ, 
                        APR_UREAD | APR_UWRITE | APR_GREAD, p);
-    CuAssertIntEquals(tc, rv, APR_SUCCESS);
+    CuAssertIntEquals(tc, APR_SUCCESS, rv);
     CuAssertPtrNotNull(tc, filetest);
     apr_file_close(filetest);
 }
@@ -120,6 +120,7 @@ static void test_read(CuTest *tc)
                        APR_READ, 
                        APR_UREAD | APR_UWRITE | APR_GREAD, p);
 
+    apr_assert_success(tc, "Opening test file " FILENAME, rv);
     rv = apr_file_read(filetest, str, &nbytes);
     CuAssertIntEquals(tc, APR_SUCCESS, rv);
     CuAssertIntEquals(tc, strlen(TESTSTR), nbytes);
@@ -137,9 +138,10 @@ static void test_filename(CuTest *tc)
     rv = apr_file_open(&filetest, FILENAME, 
                        APR_READ, 
                        APR_UREAD | APR_UWRITE | APR_GREAD, p);
+    apr_assert_success(tc, "Opening test file " FILENAME, rv);
 
     rv = apr_file_name_get(&str, filetest);
-    CuAssertIntEquals(tc, rv, APR_SUCCESS);
+    CuAssertIntEquals(tc, APR_SUCCESS, rv);
     CuAssertStrEquals(tc, FILENAME, str);
 
     apr_file_close(filetest);
@@ -155,10 +157,10 @@ static void test_fileclose(CuTest *tc)
     rv = apr_file_open(&filetest, FILENAME, 
                        APR_READ, 
                        APR_UREAD | APR_UWRITE | APR_GREAD, p);
-
+    apr_assert_success(tc, "Opening test file " FILENAME, rv);
 
     rv = apr_file_close(filetest);
-    CuAssertIntEquals(tc, rv, APR_SUCCESS);
+    CuAssertIntEquals(tc, APR_SUCCESS, rv);
     /* We just closed the file, so this should fail */
     rv = apr_file_read(filetest, &str, &one);
     CuAssertIntEquals(tc, 1, APR_STATUS_IS_EBADF(rv));
@@ -230,7 +232,7 @@ static void test_open_readwrite(CuTest *tc)
     rv = apr_file_open(&filetest, FILENAME, 
                        APR_READ | APR_WRITE, 
                        APR_UREAD | APR_UWRITE | APR_GREAD, p);
-    CuAssertIntEquals(tc, rv, APR_SUCCESS);
+    CuAssertIntEquals(tc, APR_SUCCESS, rv);
     CuAssertPtrNotNull(tc, filetest);
 
     apr_file_close(filetest);
@@ -247,6 +249,7 @@ static void test_seek(CuTest *tc)
     rv = apr_file_open(&filetest, FILENAME, 
                        APR_READ, 
                        APR_UREAD | APR_UWRITE | APR_GREAD, p);
+    apr_assert_success(tc, "Open test file " FILENAME, rv);
 
     rv = apr_file_read(filetest, str, &nbytes);
     CuAssertIntEquals(tc, APR_SUCCESS, rv);
@@ -369,12 +372,15 @@ static void test_gets(CuTest *tc)
     CuAssertIntEquals(tc, APR_SUCCESS, rv);
 
     rv = apr_file_gets(str, 256, f);
-    /* Only one line in the test file, so we should get the EOF on the first
-     * call to gets.
+    /* Only one line in the test file, so APR will encounter EOF on the first
+     * call to gets, but we should get APR_SUCCESS on this call and
+     * APR_EOF on the next.
      */
-    CuAssertIntEquals(tc, APR_EOF, rv);
+    CuAssertIntEquals(tc, APR_SUCCESS, rv);
     CuAssertStrEquals(tc, TESTSTR, str);
-
+    rv = apr_file_gets(str, 256, f);
+    CuAssertIntEquals(tc, APR_EOF, rv);
+    CuAssertStrEquals(tc, "", str);
     apr_file_close(f);
 }
 
@@ -500,6 +506,45 @@ static void test_mod_neg(CuTest *tc)
     CuAssertIntEquals(tc, APR_SUCCESS, rv);
 }
 
+static void test_truncate(CuTest *tc)
+{
+    apr_status_t rv;
+    apr_file_t *f;
+    const char *fname = "data/testtruncate.dat";
+    const char *s;
+    apr_size_t nbytes;
+    apr_finfo_t finfo;
+
+    apr_file_remove(fname, p);
+
+    rv = apr_file_open(&f, fname,
+                       APR_CREATE | APR_WRITE, APR_UREAD | APR_UWRITE, p);
+    CuAssertIntEquals(tc, APR_SUCCESS, rv);
+    
+    s = "some data";
+    nbytes = strlen(s);
+    rv = apr_file_write(f, s, &nbytes);
+    CuAssertIntEquals(tc, APR_SUCCESS, rv);
+    CuAssertIntEquals(tc, strlen(s), nbytes);
+
+    rv = apr_file_close(f);
+    CuAssertIntEquals(tc, APR_SUCCESS, rv);
+
+    rv = apr_file_open(&f, fname,
+                       APR_TRUNCATE | APR_WRITE, APR_UREAD | APR_UWRITE, p);
+    CuAssertIntEquals(tc, APR_SUCCESS, rv);
+
+    rv = apr_file_close(f);
+    CuAssertIntEquals(tc, APR_SUCCESS, rv);
+
+    rv = apr_stat(&finfo, fname, APR_FINFO_SIZE, p);
+    CuAssertIntEquals(tc, APR_SUCCESS, rv);
+    CuAssertIntEquals(tc, 0, finfo.size);
+
+    rv = apr_file_remove(fname, p);
+    CuAssertIntEquals(tc, APR_SUCCESS, rv);
+}
+
 CuSuite *testfile(void)
 {
     CuSuite *suite = CuSuiteNew("File I/O");
@@ -524,6 +569,7 @@ CuSuite *testfile(void)
     SUITE_ADD_TEST(suite, test_gets);
     SUITE_ADD_TEST(suite, test_bigread);
     SUITE_ADD_TEST(suite, test_mod_neg);
+    SUITE_ADD_TEST(suite, test_truncate);
 
     return suite;
 }

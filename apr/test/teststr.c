@@ -184,11 +184,26 @@ static void snprintf_int64(CuTest *tc)
 static void string_error(CuTest *tc)
 {
      char buf[128], *rv;
-     
+
+     buf[0] = '\0';
      rv = apr_strerror(APR_ENOENT, buf, sizeof buf);
      CuAssertPtrEquals(tc, buf, rv);
-     /* ### relax this comparison. */
-     CuAssertStrEquals(tc, "No such file or directory", buf);
+     CuAssertTrue(tc, strlen(buf) > 0);
+
+     rv = apr_strerror(APR_TIMEUP, buf, sizeof buf);
+     CuAssertPtrEquals(tc, buf, rv);
+     CuAssertStrEquals(tc, "The timeout specified has expired", buf);
+}
+
+#define SIZE 180000
+static void string_long(CuTest *tc)
+{
+    char s[SIZE + 1];
+
+    memset(s, 'A', SIZE);
+    s[SIZE] = '\0';
+
+    apr_psprintf(p, "%s", s);
 }
 
 CuSuite *teststr(void)
@@ -201,6 +216,7 @@ CuSuite *teststr(void)
     SUITE_ADD_TEST(suite, snprintf_int64);
     SUITE_ADD_TEST(suite, test_strtok);
     SUITE_ADD_TEST(suite, string_error);
+    SUITE_ADD_TEST(suite, string_long);
 
     return suite;
 }

@@ -71,10 +71,10 @@
 #elif defined(DARWIN)
 # define MOD_NAME ".libs/mod_test.so" 
 # define LIB_NAME ".libs/libmod_test.dylib" 
-#elif defined(__hpux__)
+#elif defined(__hpux__) || defined(__hpux)
 # define MOD_NAME ".libs/mod_test.sl"
 # define LIB_NAME ".libs/libmod_test.sl"
-#elif defined(_AIX)
+#elif defined(_AIX) || defined(__bsdi__)
 # define MOD_NAME ".libs/libmod_test.so"
 # define LIB_NAME ".libs/libmod_test.so"
 #else /* Every other Unix */

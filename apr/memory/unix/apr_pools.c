@@ -55,6 +55,7 @@
 #include "apr.h"
 #include "apr_private.h"
 
+#include "apr_atomic.h"
 #include "apr_portable.h" /* for get_os_proc */
 #include "apr_strings.h"
 #include "apr_general.h"
@@ -555,6 +556,13 @@ APR_DECLARE(apr_status_t) apr_pool_initialize(void)
 
     apr_pool_tag(global_pool, "apr_global_pool");
 
+    /* This has to happen here because mutexes might be backed by
+     * atomics.  It used to be snug and safe in apr_initialize().
+     */
+    if ((rv = apr_atomic_init(global_pool)) != APR_SUCCESS) {
+        return rv;
+    }
+
 #if APR_HAS_THREADS
     {
         apr_thread_mutex_t *mutex;
@@ -856,7 +864,7 @@ APR_DECLARE(apr_status_t) apr_pool_create_ex(apr_pool_t **newpool,
 #if APR_HAS_THREADS
         apr_thread_mutex_t *mutex;
 
-        if ((mutex = apr_allocator_mutex_get(allocator)) != NULL)
+        if ((mutex = apr_allocator_mutex_get(parent->allocator)) != NULL)
             apr_thread_mutex_lock(mutex);
 #endif /* APR_HAS_THREADS */
 
@@ -976,7 +984,7 @@ static int psprintf_flush(apr_vformatter_buff_t *vbuff)
 
         if (ps->got_a_new_node) {
             active->next = ps->free;
-            ps->free = node;
+            ps->free = active;
         }
 
         ps->got_a_new_node = 1;
@@ -1265,6 +1273,13 @@ APR_DECLARE(apr_status_t) apr_pool_initialize(void)
     apr_pool_tag(global_pool, "APR global pool");
 
     apr_pools_initialized = 1;
+
+    /* This has to happen here because mutexes might be backed by
+     * atomics.  It used to be snug and safe in apr_initialize().
+     */
+    if ((rv = apr_atomic_init(global_pool)) != APR_SUCCESS) {
+        return rv;
+    }
 
 #if (APR_POOL_DEBUG & APR_POOL_DEBUG_VERBOSE_ALL)
     apr_file_open_stderr(&file_stderr, global_pool);
@@ -2228,60 +2243,3 @@ APR_DECLARE(apr_status_t) apr_pool_create_ex(apr_pool_t **newpool,
 }
 
 #endif /* APR_POOL_DEBUG */
-
-/* Deprecated */
-APR_DECLARE(void) apr_allocator_set_max_free(apr_allocator_t *allocator,
-                                             apr_size_t size)
-{
-    apr_allocator_max_free_set(allocator, size);
-}
-
-/* Deprecated */
-APR_DECLARE(void) apr_pool_set_abort(apr_abortfunc_t abort_fn,
-                                     apr_pool_t *pool)
-{
-    apr_pool_abort_set(abort_fn, pool);
-}
-
-/* Deprecated */
-APR_DECLARE(apr_abortfunc_t) apr_pool_get_abort(apr_pool_t *pool)
-{
-    return apr_pool_abort_get(pool);
-}
-
-/* Deprecated */
-APR_DECLARE(apr_pool_t *) apr_pool_get_parent(apr_pool_t *pool)
-{
-    return apr_pool_parent_get(pool);
-}
-
-/* Deprecated */
-APR_DECLARE(void) apr_allocator_set_owner(apr_allocator_t *allocator,
-                                          apr_pool_t *pool)
-{
-    apr_allocator_owner_set(allocator, pool);
-}
-
-/* Deprecated */
-APR_DECLARE(apr_pool_t *) apr_allocator_get_owner(
-                                  apr_allocator_t *allocator)
-{
-    return apr_allocator_owner_get(allocator);
-}
-
-#if APR_HAS_THREADS
-/* Deprecated */
-APR_DECLARE(apr_thread_mutex_t *) apr_allocator_get_mutex(
-                                      apr_allocator_t *allocator)
-{
-    return apr_allocator_mutex_get(allocator);
-}
-
-/* Deprecated */
-APR_DECLARE(void) apr_allocator_set_mutex(apr_allocator_t *allocator,
-                                          apr_thread_mutex_t *mutex)
-{
-    apr_allocator_mutex_set(allocator, mutex);
-}
-#endif /* APR_HAS_THREADS */
-
