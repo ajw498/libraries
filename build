@@ -94,8 +94,7 @@ EOF
 AUTOCONF=autoconf2.50 ./buildconf \
 && ./configure --host=arm-riscos-aof --prefix=$PREFIX -C \
 && mv include/apr.h include/apr.h.orig && \
-sed 's/APR_HAS_MMAP.*/APR_HAS_MMAP 0/' < include/apr.h.orig \       
-> include/apr.h \
+sed 's/APR_HAS_MMAP.*/APR_HAS_MMAP 0/' < include/apr.h.orig > include/apr.h \
 && make clean && make && make install) || exit 1
 
 (cd $APRUTIL; \
