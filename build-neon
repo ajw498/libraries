@@ -1,12 +1,16 @@
 #!/bin/sh
 
-NEON=neon-0.24.4
+NEON=neon-0.24.7
 
 if [ -n "$1" ]; then
  PREFIX=$1
 else
  PREFIX=/home/riscos/cross/local
 fi
+
+rm -rf $NEON
+tar -xzf $NEON.tar.gz || exit 1
+
 
 cat > $NEON/config.cache << EOF
 ac_cv_prog_cc_g=\${ac_cv_prog_cc_g=no}
@@ -17,4 +21,4 @@ EOF
 (cd $NEON; \
 ./configure --host=arm-riscos-aof -C --prefix=$PREFIX \
 --with-libs=$PREFIX --with-force-zlib --with-ssl \
-&& make clean && make && make install) || exit 1
+&& make && make install) || exit 1
