@@ -12,17 +12,26 @@ APR=apr
 APRUTIL=apr-util
 GETTEXT=gettext-0.11.5
 
-PREFIX=/home/riscos/cross/local
+if [ -n "$1" ]; then
+ PREFIX=$1
+else
+ PREFIX=/home/riscos/cross/local
+fi 
 
-mkdir -p $PREFIX/include
+mkdir -p $PREFIX/include || exit 1
 
-rm -f /home/riscos/cross/include/unixlib/pthread.h
+#rm -f /home/riscos/cross/include/unixlib/pthread.h
+ln -s /home/riscos/libs/oslib $PREFIX/include/oslib
+ln -s /home/riscos/libs/oslibsupport $PREFIX/include/oslibsupport
+ln -s /home/riscos/libs/oslib/OSLib.o $PREFIX/libs/oslib.o
+ln -s /home/riscos/libs/oslibsupport/OSLibSupport.o $PREFIX/libs/oslibsupport.o
 
 (cd $ZLIB; ./configure --prefix=$PREFIX \
 && make clean && make && make install) || exit 1
 
-(cd $OPENSSL; ./Configure --prefix=$PREFIX -DNO_SYS_UN_H gcc \
-&& make clean && make && make install) || exit 1
+(cd $OPENSSL; ./Configure --prefix=$PREFIX \
+-DNO_SYS_UN_H -DDEVRANDOM=\"urandom\" \
+gcc && make clean && make && make install) || exit 1
 
 (cd $EXPAT; \
 ./configure --host=arm-riscos-aof --prefix=$PREFIX \
