@@ -1,0 +1,48 @@
+#ifndef wimpevent_H
+#define wimpevent_H
+
+/* Title:   wimpevent.c
+ * Purpose: functions for wimp event dispatching
+ * Author:  IDJ
+ * History: 19-Jun-94: IDJ: created
+ *
+ */
+/*
+      OSLibSupport is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 1, or (at your option)
+   any later version.
+
+      OSLibSupport is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+      You should have received a copy of the GNU General Public License
+   along with this programme; if not, write to the Free Software
+   Foundation, Inc, 675 Mass Ave, Cambridge, MA 02139, U S A.
+*/
+
+#ifndef os_H
+#include "oslib/os.h"
+#endif
+
+#ifndef wimp_H
+#include "oslib/wimp.h"
+#endif
+
+#ifndef toolbox_H
+#include "oslib/toolbox.h"
+#endif
+
+#ifndef event_H
+#include "event.h"
+#endif
+
+extern void wimpevent_dispatch (int event_code, wimp_block *block, toolbox_block *id_block);
+
+extern void wimpevent_register_wimp_handler (toolbox_o, int event_code, event_wimp_handler *handler, void *handle);
+
+extern void wimpevent_deregister_wimp_handler (toolbox_o, int event_code, event_wimp_handler *handler, void *handle);
+
+#endif

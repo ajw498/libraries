@@ -1,0 +1,95 @@
+;Assembler header file for OLE
+;written by DefMod (Oct 26 2000) on Tue Dec 12 20:10:10 2000
+;Tom Hughes, tom@compton.nu, 13 Mar 1999
+
+        [       :LNOT: :DEF: Get_Types
+        GBLS    Get_Types
+        ]
+        [       :LNOT: :DEF: Types_Hdr
+Get_Types                       SETS    "GET OSLib:oslib.Hdr.Types"
+        |
+Get_Types                       SETS    ""
+        ]
+        $Get_Types
+
+        [       :LNOT: :DEF: Get_OS
+        GBLS    Get_OS
+        ]
+        [       :LNOT: :DEF: OS_Hdr
+Get_OS                          SETS    "GET OSLib:oslib.Hdr.OS"
+        |
+Get_OS                          SETS    ""
+        ]
+        $Get_OS
+
+        [       :LNOT: :DEF: Get_WIMP
+        GBLS    Get_WIMP
+        ]
+        [       :LNOT: :DEF: WIMP_Hdr
+Get_WIMP                        SETS    "GET OSLib:oslib.Hdr.WIMP"
+        |
+Get_WIMP                        SETS    ""
+        ]
+        $Get_WIMP
+
+        [       :LNOT: :DEF: OLE_Hdr
+        GBLS    OLE_Hdr
+
+;Symbols for constants
+Message_OLEFileChanged          *       &80E1E
+Message_OLEOpenSession          *       &80E21
+Message_OLEOpenSessionAck       *       &80E22
+Message_OLECloseSession         *       &80E23
+OLE_AllSessions                 *       &FFFFFFFF
+OLE_FileNameChanged             *       &0
+OLE_FileContentChanged          *       &1
+
+;Symbols for structure offsets and sizes
+OLE_S                           *       4 ;abstract type
+OLE_FileChangedTag              *       4 ;abstract type
+OLE_CloseSessionTag             *       4 ;abstract type
+                                ^       0
+OLE_MessageFileChanged_tag      #       OLE_FileChangedTag
+OLE_MessageFileChanged_session_handle #       OLE_S
+OLE_MessageFileChanged_file_name #       228*Char
+OLE_MessageFileChanged          *       @
+
+                                ^       0
+OLE_MessageOpenSession_name     #       16*Char
+OLE_MessageOpenSession_w        #       Wimp_W
+OLE_MessageOpenSession_pos      #       OS_Coord
+OLE_MessageOpenSession_format   #       Int
+OLE_MessageOpenSession_session_handle #       OLE_S
+OLE_MessageOpenSession_file_type #       Bits
+OLE_MessageOpenSession_file_name #       196*Char
+OLE_MessageOpenSession          *       @
+
+                                ^       0
+OLE_MessageCloseSession_tag     #       OLE_CloseSessionTag
+OLE_MessageCloseSession_session_handle #       OLE_S
+OLE_MessageCloseSession         *       @
+
+                                ^       0
+OLE_FullMessageFileChanged_tag  #       OLE_FileChangedTag
+OLE_FullMessageFileChanged_session_handle #       OLE_S
+OLE_FullMessageFileChanged_file_name #       228*Char
+OLE_FullMessageFileChanged      *       @
+
+                                ^       0
+OLE_FullMessageOpenSession_name #       16*Char
+OLE_FullMessageOpenSession_w    #       Wimp_W
+OLE_FullMessageOpenSession_pos  #       OS_Coord
+OLE_FullMessageOpenSession_format #       Int
+OLE_FullMessageOpenSession_session_handle #       OLE_S
+OLE_FullMessageOpenSession_file_type #       Bits
+OLE_FullMessageOpenSession_file_name #       196*Char
+OLE_FullMessageOpenSession      *       @
+
+                                ^       0
+OLE_FullMessageCloseSession_tag #       OLE_CloseSessionTag
+OLE_FullMessageCloseSession_session_handle #       OLE_S
+OLE_FullMessageCloseSession     *       @
+
+
+        ]
+        END

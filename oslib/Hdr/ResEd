@@ -1,0 +1,33 @@
+;Assembler header file for ResEd
+;written by DefMod (Oct 26 2000) on Tue Dec 12 19:35:20 2000
+;Anon
+
+        [       :LNOT: :DEF: Get_Types
+        GBLS    Get_Types
+        ]
+        [       :LNOT: :DEF: Types_Hdr
+Get_Types                       SETS    "GET OSLib:oslib.Hdr.Types"
+        |
+Get_Types                       SETS    ""
+        ]
+        $Get_Types
+
+        [       :LNOT: :DEF: ResEd_Hdr
+        GBLS    ResEd_Hdr
+
+;Symbols for constants
+Message_ResEdObjectLoad         *       &83340
+Message_ResEdObjectLoaded       *       &83341
+Message_ResEdObjectSend         *       &83342
+Message_ResEdObjectSending      *       &83343
+Message_ResEdObjectRenamed      *       &83344
+Message_ResEdObjectDeleted      *       &83345
+Message_ResEdObjectModified     *       &83346
+Message_ResEdObjectClosed       *       &83347
+Message_ResEdSpritesChanged     *       &83348
+Message_ResEdObjectNameRequest  *       &83349
+Message_ResEdObjectName         *       &8334A
+Message_ResEdKeycutDetails      *       &8334B
+
+        ]
+        END

@@ -1,0 +1,2 @@
+Set OSLibSupport$Dir <Obey$Dir>
+Set OSLibSupport$Path <OSLibSupport$Dir>.

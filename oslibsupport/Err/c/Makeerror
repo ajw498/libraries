@@ -1,0 +1,88 @@
+/****************************************************************
+** Title  :     Err.c.MakeError
+**
+** Purpose:     Error handling utilities
+**
+** Copyright:   ©1995 Control Computer Consultants
+**
+** History:     950220  created
+**              951026  now uses OSLib (v5.10) instead of _kernel calls
+**
+*****************************************************************/
+/*
+      OSLibSupport is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 1, or (at your option)
+   any later version.
+
+      OSLibSupport is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+      You should have received a copy of the GNU General Public License
+   along with this programme; if not, write to the Free Software
+   Foundation, Inc, 675 Mass Ave, Cambridge, MA 02139, U S A.
+*/
+
+#include "err.h"
+
+#if !defined( os_H )
+  #include "oslib/os.h"
+#endif
+
+#if !defined( toolbox_H )
+  #include "oslib/toolbox.h"
+#endif
+
+#if !defined( __string_h )
+  #include <string.h>
+#endif
+
+/***************************************************************
+** Description: Attempt to build an error message via MessageTrans;
+**              return a pointer to an error block containing the message
+**
+** Passed:      iErrNum         - error number
+**              zMessage        - error message to be passed to MessageTrans
+
+** Returns:     pointer to MessageTrans buffer containing error message
+**
+** Processing:  Gets Application Messages file from Toolbox;
+**              If valid, then passes it to MessageTrans with zMessage for lookup;
+**              If that fails, then just return the error block untranslated
+**
+*****************************************************************/
+os_error* Err_MakeError( int iErrNum, char *zMessage )
+  {
+  os_error* pxError;
+  os_error xError;
+  messagetrans_control_block xControlBlock;
+  messagetrans_control_block* pxControlBlock = NULL;
+
+
+  // get the client's messages pointer from the toolbox
+  pxError = xtoolboxgetsysinfo_message_trans_control_block( &xControlBlock );
+  if( !pxError )
+    pxControlBlock = &xControlBlock;
+
+  // set up a temporary error block
+  xError.errnum = iErrNum;
+  strcpy( xError.errmess, zMessage );
+
+  // translate the error message
+  pxError = xmessagetrans_error_lookup( &xError,
+                                        pxControlBlock,
+                                        NULL, 0,
+                                        NULL, NULL, NULL, NULL );
+  if( pxError -> errnum != iErrNum )
+    {
+    // error lookup failed; just copy the message
+    xmessagetrans_copy_error( &xError, &pxError );
+    }
+
+  return pxError;
+  }
+
+
+/*** END ***/

@@ -1,4 +1,7 @@
 #!/bin/sh
+#
+# Usage: build [prefix [32]]
+#
 
 OPENSSL=openssl-0.9.6g
 NEON=neon-0.23.5
@@ -18,13 +21,21 @@ else
  PREFIX=/home/riscos/cross/local
 fi 
 
-mkdir -p $PREFIX/include || exit 1
+BUILD=$2
 
-#rm -f /home/riscos/cross/include/unixlib/pthread.h
-ln -s /home/riscos/libs/oslib $PREFIX/include/oslib
-ln -s /home/riscos/libs/oslibsupport $PREFIX/include/oslibsupport
-ln -s /home/riscos/libs/oslib/OSLib.o $PREFIX/libs/oslib.o
-ln -s /home/riscos/libs/oslibsupport/OSLibSupport.o $PREFIX/libs/oslibsupport.o
+mkdir -p $PREFIX/include $PREFIX/libs || exit 1
+
+# Remove pthread.h if it is a dummy header
+PTHREAD=/home/riscos/cross/include/unixlib/pthread.h
+grep pthread_t $PTHREAD || rm -f $PTHREAD
+
+rm -f $PREFIX/include/oslib*
+rm -f $PREFIX/lib/liboslib*
+
+ln -s `pwd`/oslib/oslib $PREFIX/include/oslib
+ln -s `pwd`/oslibsupport/oslibsupport $PREFIX/include/oslibsupport
+ln -s `pwd`/oslib/OSLib${BUILD}.o $PREFIX/lib/liboslib.o
+ln -s `pwd`/oslibsupport/OSLibSupport${BUILD}.o $PREFIX/lib/liboslibsupport.o
 
 (cd $ZLIB; ./configure --prefix=$PREFIX \
 && make clean && make && make install) || exit 1

@@ -1,0 +1,2 @@
+Set Make$Dir <Obey$Dir>
+AMU -f <Make$Dir>.MakeFile 		-desktop

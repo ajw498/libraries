@@ -1,0 +1,35 @@
+;Assembler header file for FPEmulator
+;written by DefMod (Oct 26 2000) on Tue Dec 12 18:52:59 2000
+;Jonathan Coxhead, jonathan@doves.demon.co.uk, 29 Apr 1994
+
+        [       :LNOT: :DEF: Get_Types
+        GBLS    Get_Types
+        ]
+        [       :LNOT: :DEF: Types_Hdr
+Get_Types                       SETS    "GET OSLib:oslib.Hdr.Types"
+        |
+Get_Types                       SETS    ""
+        ]
+        $Get_Types
+
+        [       :LNOT: :DEF: Get_OS
+        GBLS    Get_OS
+        ]
+        [       :LNOT: :DEF: OS_Hdr
+Get_OS                          SETS    "GET OSLib:oslib.Hdr.OS"
+        |
+Get_OS                          SETS    ""
+        ]
+        $Get_OS
+
+        [       :LNOT: :DEF: FPEmulator_Hdr
+        GBLS    FPEmulator_Hdr
+
+;Symbols for SWI's and SWI reason codes
+XFPEmulator_Version             *       &60480
+FPEmulator_Version              *       &40480
+   ;Exit
+   ;  R0 = version (Int)
+
+        ]
+        END

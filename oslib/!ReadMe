@@ -1,0 +1,52 @@
+OSLib.!Readme 20000930
+
+Installation
+------------
+  To install OSLib, open the archive which you downloaded from the  web site.
+As you are  reading this, you  have already succeeded  in doing so.  However,
+there are two archives, one is only suitable for  filing systems that support
+more than 77 files per directory, and one which will work anywhere. Make sure
+you have the appropriate one for your system. 
+
+  Make sure you read the "Copying" text so that you know what you may and may
+not legally do. 
+
+  The "ChangeLog" text  contains details on  how OSLib  has evolved over  the
+years, and  will  be  useful if  you're  upgrading,  and and  you  find  it's
+behaviour to be subtly different.
+ 
+  The "Docs" directory contains a  miscellany of useful documents, which  you
+may read at your leisure.
+
+  Finally, the OSLib directory is what  it's all about; you should copy  this
+to a suitable  place on your hard  disc; probably in  the same place as  your
+other libraries. Don't put it too low down in the directory structure; if you
+do the path will become too long for the compiler to resolve it. Two or three
+levels down should be OK.
+
+Using OSLib
+-----------
+  At the top level in  the OSLib directory you  will find an Obey file  named
+SetVars. When this is run, the OSLib:  path is set up. If you want  to change
+it, that's fine, but the default is really all you need. Make sure SetVars is
+executed before you attempt to build anything using the library.
+
+  In any source file  from which you want  to call an OSLib veneer,  you will
+have  to  specify  where  it  is  to  be  found  with  a  line  of  the  type
+#include "oslib/wimp.h".  In this example,  the "oslib/"  prefix ensures that
+"wimp.h"  is  loaded  from oslib,  as  opposed  to  any  other library.  When
+compiling,  you  need  to  ensure that  the  compiler  can  locate OSLib,  by
+specifying "-IOSLib:" on the command line.
+
+  The  above gives the preferred  way of using  OSLib. However, much existing
+code will not  contain the "oslib/" prefix in the #include line. If you don't
+want  to change things, and are not  worried about name collissions, then you
+may specift  "-IOSLibInclude:"  on the  command line,  which  will allow  the
+compiler to locate  files without  the prefix.  In new code,  always use  the
+prefixed form for safety.
+
+If you still have problems, then subscribe to the OSLib-User mail list, as described on the web site, and ask your question there.
+
+--------------------
+
+Tony van der Hoff.

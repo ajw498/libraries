@@ -1,0 +1,6 @@
+<Make$Dir>.Choices.obj.*
+<Make$Dir>.Err.obj.*
+<Make$Dir>.Events.obj.*
+<Make$Dir>.Message.obj.*
+<Make$Dir>.Task.obj.*
+<Make$Dir>.X.obj.*

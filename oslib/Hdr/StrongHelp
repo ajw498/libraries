@@ -1,0 +1,61 @@
+;Assembler header file for StrongHelp
+;written by DefMod (Oct 26 2000) on Tue Dec 12 20:10:06 2000
+;Tom Hughes, tom@compton.nu, 9 Apr 1999
+
+        [       :LNOT: :DEF: Get_Types
+        GBLS    Get_Types
+        ]
+        [       :LNOT: :DEF: Types_Hdr
+Get_Types                       SETS    "GET OSLib:oslib.Hdr.Types"
+        |
+Get_Types                       SETS    ""
+        ]
+        $Get_Types
+
+        [       :LNOT: :DEF: Get_OS
+        GBLS    Get_OS
+        ]
+        [       :LNOT: :DEF: OS_Hdr
+Get_OS                          SETS    "GET OSLib:oslib.Hdr.OS"
+        |
+Get_OS                          SETS    ""
+        ]
+        $Get_OS
+
+        [       :LNOT: :DEF: Get_WIMP
+        GBLS    Get_WIMP
+        ]
+        [       :LNOT: :DEF: WIMP_Hdr
+Get_WIMP                        SETS    "GET OSLib:oslib.Hdr.WIMP"
+        |
+Get_WIMP                        SETS    ""
+        ]
+        $Get_WIMP
+
+        [       :LNOT: :DEF: StrongHelp_Hdr
+        GBLS    StrongHelp_Hdr
+
+;Symbols for constants
+Message_StrongHelpCommand       *       &43B00
+Message_StrongHelpCommandFailed *       &43B01
+
+;Symbols for structure offsets and sizes
+                                ^       0
+StrongHelp_MessageCommand_command #       236*Char
+StrongHelp_MessageCommand       *       @
+
+                                ^       0
+StrongHelp_MessageCommandFailed_command #       236*Char
+StrongHelp_MessageCommandFailed *       @
+
+                                ^       0
+StrongHelp_FullMessageCommand_command #       236*Char
+StrongHelp_FullMessageCommand   *       @
+
+                                ^       0
+StrongHelp_FullMessageCommandFailed_command #       236*Char
+StrongHelp_FullMessageCommandFailed *       @
+
+
+        ]
+        END

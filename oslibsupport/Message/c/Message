@@ -1,0 +1,247 @@
+/****************************************************************
+** Title  :   	SupportLib.Message.c.ShowMessage
+**
+** Purpose:   	Looks up message via MessageTrans and reports in message box
+**
+** Copyright:   ©1997 Control Computer Consultants
+**
+** History:     971017  created
+**              981227  Dependance on toolbox removed
+**
+*****************************************************************/
+/*
+      OSLibSupport is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 1, or (at your option)
+   any later version.
+
+      OSLibSupport is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+      You should have received a copy of the GNU General Public License
+   along with this programme; if not, write to the Free Software
+   Foundation, Inc, 675 Mass Ave, Cambridge, MA 02139, U S A.
+*/
+
+// from C lib:
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+// from osLib:
+#include "oslib/os.h"
+#include "oslib/wimp.h"
+
+// from SupportLib:
+#include "Message.h"
+
+#define NAMBUFSIZ	32
+#define MESBUFSIZ     	256
+static os_error gxErrBlock;  // static, in case we're out of memory
+
+
+/****************************************************************
+**  Return a pointer to an error block which contains the error message text
+**  associated with the token passed in zToken; or from zDefault if token not found
+****************************************************************/
+const os_error* Message_MakeError(  int iErrNum,
+                                    messagetrans_control_block* pxBlock,
+                                    const char* zToken,
+                                    const char* zDefault, ... )
+{
+  os_error* pxErr;
+  va_list xVa;
+  const char* zFormat;
+
+  zFormat = Message_GetMessage( pxBlock, zToken, zDefault ); // get the format string
+
+  va_start( xVa, zDefault );
+  vsprintf( &gxErrBlock.errmess[0], zFormat, xVa );
+  va_end( xVa );
+
+  gxErrBlock.errnum = iErrNum;
+
+  if( xmessagetrans_copy_error( &gxErrBlock, &pxErr ) != NULL )
+    pxErr = &gxErrBlock;
+  return pxErr;
+}
+
+
+/****************************************************************
+** look up the message associated with zToken in the Messages file.
+**  return pointer to message if found;
+**  else return pointer to zDefault
+****************************************************************/
+const char* Message_GetMessage( messagetrans_control_block* pxBlock, const char* zToken, const char* zDefault )
+{
+  const char* zFormat = NULL;
+  int iBytes = 0;
+  static char acMessBuf[ MESBUFSIZ ];
+
+  // get the message file descriptor from the toolbox, and read the string
+  if(  pxBlock != NULL && zToken != NULL && *zToken != '\0'
+    && xmessagetrans_lookup(  pxBlock,
+      	      	      	      (char*)zToken,
+      	      	      	      acMessBuf, MESBUFSIZ,
+      	      	      	      NULL, NULL, NULL, NULL,
+      	      	      	      (char**)&zFormat,
+      	      	      	      &iBytes )
+      	      	      	  == NULL
+//    && iBytes > 0
+     )
+  {
+    // terminate the message
+    acMessBuf[ iBytes ] = '\0';
+  }
+  else
+  {
+    // unable to find token - use default
+    zFormat = zDefault;
+  }
+  return zFormat;
+}
+
+/****************************************************************
+**  Return a pointer to an error block which contains the error message text
+**  associated with the token passed in pxError
+**  returns pxError if unable to find messages file
+****************************************************************/
+const os_error* Message_GetError( messagetrans_control_block* pxBlock, const os_error* pxError )
+{
+  const os_error* pxErr;
+
+  if(  pxBlock == NULL
+    || (  pxErr = xmessagetrans_error_lookup( pxError, pxBlock, NULL, 0, NULL, NULL, NULL, NULL ) ) == NULL
+    )
+  {
+    pxErr = pxError;
+  }
+  return pxErr;
+}
+
+
+/****************************************************************
+**  Show a message in a standard Wimp error box
+****************************************************************/
+static wimp_error_box_selection Show( bool bFatal,
+      	      	      	      	      wimp_error_box_flags iFlags,
+      	      	      	      	      messagetrans_control_block* pxBlock,
+      	      	      	      	      const char* zAppName,
+      	      	      	      	      const char* zToken,
+      	      	      	      	      const char* zDefault,
+      	      	      	      	      va_list xVa )
+{
+  const char* zFormat;
+  wimp_error_box_selection xClick = wimp_ERROR_BOX_SELECTED_NOTHING;
+
+  /* error code = 0 */
+  gxErrBlock.errnum = bFatal ? (1U << 31) : 0;
+
+  // read the string
+  zFormat = Message_GetMessage( pxBlock, zToken, zDefault );
+
+  /* format the string and display it */
+  vsprintf( &gxErrBlock.errmess[0], zFormat, xVa );
+  xwimp_report_error_by_category( &gxErrBlock, iFlags, zAppName, NULL, NULL, NULL, &xClick );
+
+  return xClick;
+}
+
+/****************************************************************
+**  Display a message in a wimp box with OK button
+**  and info sprite (RO3.5+)
+**  Does not return until OK is clicked
+****************************************************************/
+void Message_ShowMessage( messagetrans_control_block* pxBlock,
+      	      	      	  const char* zAppName,
+      	      	      	  const char* zToken,
+      	      	      	  const char* zDefault, ... )
+{
+  va_list xVa;
+  /* new (RO3.5) style call with Continue button */
+  wimp_error_box_flags iFlags =   wimp_ERROR_BOX_OK_ICON
+      	      	      	      	| wimp_ERROR_BOX_SHORT_TITLE
+      	      	      	      	| wimp_ERROR_BOX_GIVEN_CATEGORY
+      	      	      	      	| ( wimp_ERROR_BOX_CATEGORY_INFO << wimp_ERROR_BOX_CATEGORY_SHIFT );
+
+  va_start( xVa, zDefault );
+  Show( FALSE, iFlags, pxBlock, zAppName, zToken, zDefault, xVa );
+  va_end( xVa );
+}
+
+
+/****************************************************************
+**  Display an error message in a wimp box with OK button
+**  and Caution sprite (RO3.5+)
+**  Does not return until OK is clicked
+****************************************************************/
+void Message_ShowError(   messagetrans_control_block* pxBlock,
+      	      	      	  const char* zAppName,
+      	      	      	  const char* zToken,
+      	      	      	  const char* zDefault, ... )
+{
+  va_list xVa;
+  wimp_error_box_flags iFlags =   wimp_ERROR_BOX_OK_ICON
+      	      	      	      	| wimp_ERROR_BOX_GIVEN_CATEGORY
+      	      	      	      	| ( wimp_ERROR_BOX_CATEGORY_ERROR << wimp_ERROR_BOX_CATEGORY_SHIFT );
+
+  va_start( xVa, zDefault );
+  Show( FALSE, iFlags, pxBlock, zAppName, zToken, zDefault, xVa );
+  va_end( xVa );
+}
+
+
+
+/****************************************************************
+**  Display an error message in a wimp box with OK button
+**  and Stop sprite (RO3.5+)
+**  Does not return
+****************************************************************/
+void Message_ShowErrorFatal(  messagetrans_control_block* pxBlock,
+      	      	      	      const char* zAppName,
+      	      	      	      const char* zToken,
+      	      	      	      const char* zDefault, ... )
+{
+  va_list xVa;
+  wimp_error_box_selection xSelection;
+  wimp_error_box_flags iFlags =   wimp_ERROR_BOX_OK_ICON
+      	      	      	      	| wimp_ERROR_BOX_GIVEN_CATEGORY
+      	      	      	      	| ( wimp_ERROR_BOX_CATEGORY_PROGRAM << wimp_ERROR_BOX_CATEGORY_SHIFT );
+
+  va_start( xVa, zDefault );
+  xSelection = Show( TRUE, iFlags, pxBlock, zAppName, zToken, zDefault, xVa );
+  va_end( xVa );
+
+  exit(0);
+}
+
+
+
+/****************************************************************
+**  Display a question in a wimp box with OK and cancel buttons
+**  and question sprite (RO3.5+)
+**  returns TRUE if OK is clicked
+****************************************************************/
+bool Message_ShowQuery(       messagetrans_control_block* pxBlock,
+      	      	      	      const char* zAppName,
+      	      	      	      const char* zToken,
+      	      	      	      const char* zDefault, ... )
+{
+  va_list xVa;
+  wimp_error_box_selection xSelection;
+  wimp_error_box_flags iFlags =   wimp_ERROR_BOX_OK_ICON
+      	      	      	      	| wimp_ERROR_BOX_CANCEL_ICON
+      	      	      	      	| wimp_ERROR_BOX_SHORT_TITLE
+      	      	      	      	| wimp_ERROR_BOX_GIVEN_CATEGORY
+      	      	      	      	| ( wimp_ERROR_BOX_CATEGORY_QUESTION << wimp_ERROR_BOX_CATEGORY_SHIFT );
+
+  va_start( xVa, zDefault );
+  xSelection = Show( FALSE, iFlags, pxBlock, zAppName, zToken, zDefault, xVa );
+  va_end( xVa );
+
+  return xSelection == wimp_ERROR_BOX_SELECTED_OK;
+}
+
+/*** END ***/

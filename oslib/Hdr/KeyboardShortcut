@@ -1,0 +1,43 @@
+;Assembler header file for KeyboardShortcut
+;written by DefMod (Oct 26 2000) on Tue Dec 12 19:35:24 2000
+;Jonathan Coxhead, jonathan@doves.demon.co.uk, 5 Sept 1995
+
+        [       :LNOT: :DEF: Get_Types
+        GBLS    Get_Types
+        ]
+        [       :LNOT: :DEF: Types_Hdr
+Get_Types                       SETS    "GET OSLib:oslib.Hdr.Types"
+        |
+Get_Types                       SETS    ""
+        ]
+        $Get_Types
+
+        [       :LNOT: :DEF: Get_Toolbox
+        GBLS    Get_Toolbox
+        ]
+        [       :LNOT: :DEF: Toolbox_Hdr
+Get_Toolbox                     SETS    "GET OSLib:oslib.Hdr.Toolbox"
+        |
+Get_Toolbox                     SETS    ""
+        ]
+        $Get_Toolbox
+
+        [       :LNOT: :DEF: KeyboardShortcut_Hdr
+        GBLS    KeyboardShortcut_Hdr
+
+;Symbols for constants
+KeyboardShortcut_ShowAsMenu     *       &1
+
+;Symbols for structure offsets and sizes
+KeyboardShortcut_Flags          *       Bits
+
+                                ^       0
+KeyboardShortcut_Object_flags   #       KeyboardShortcut_Flags
+KeyboardShortcut_Object_c       #       Int
+KeyboardShortcut_Object_action  #       Bits
+KeyboardShortcut_Object_name    #       Toolbox_StringReference
+KeyboardShortcut_Object         *       @
+
+
+        ]
+        END

@@ -1,0 +1,399 @@
+/****************************************************************
+** Title  :   	SupportLib.Choices.c.Choices
+**
+** Purpose:   	Give standard interface to application choices file
+**
+** Copyright:   ©1997 Control Computer Consultants
+**
+** History:     970820  created
+**
+*****************************************************************/
+/*
+   OSLibSupport is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 1, or (at your option)
+   any later version.
+
+   OSLibSupport is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc, 675 Mass Ave, Cambridge, MA 02139, U S A.
+*/
+
+// from CLib
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
+#include "kernel.h"
+
+// from OsLib
+#include "oslib/toolbox.h"
+#include "oslib/osfscontrol.h"
+
+// from support
+#include "x.h"
+
+// local includes
+#include "Choices.h"
+
+
+/****************************************************************
+**  defines
+****************************************************************/
+#define NAMSIZ 256
+#define CHOICES_COMMENT_CHAR '#'  /* comment character at start of line */
+#define CHOICES_SUFFIX "$Choices" /* suffix to appname to name system variable */
+
+
+/****************************************************************
+**  Globals
+****************************************************************/
+
+
+/****************************************************************
+**  Support
+****************************************************************/
+
+////////////////////////////////////////////////////////////////
+// return the Choices file name
+static char* GetFileName( char* acBuf, size_t xBufSiz )
+{
+  char acName[NAMSIZ];
+  int iSize;
+
+  // Get the app name from the toolbox
+  toolboxgetsysinfo_task_name( acName, NAMSIZ );
+
+  // create the system variable name
+  strncat( acName, CHOICES_SUFFIX, NAMSIZ - strlen( acName ) - 1 );
+
+  // get the system variable
+  os_read_var_val( acName, acBuf, xBufSiz, 0, os_VARTYPE_STRING, &iSize, NULL );
+  *(acBuf + iSize) = '\0';   // terminate the string
+
+  return acBuf;
+}
+
+
+////////////////////////////////////////////////////////////////
+// create a new choices file with header
+static FILE* NewFile( const char* zFileName )
+{
+  FILE* pxFile;
+  char acTemp[256];
+  char acName[256];
+  char acDate[64];
+  time_t xTime;
+
+  pxFile = fopen( zFileName,  "w" );
+  if( pxFile == NULL )
+  {
+    x_THROW_LAST_ERROR();
+  }
+
+  // get date and time from the os
+  time( &xTime );
+  strftime( acDate, sizeof( acDate ), "%d-%m-%Y at %H:%M:%S", localtime( &xTime ) );
+
+  // Get the app name from the toolbox
+  toolboxgetsysinfo_task_name( acName, NAMSIZ );
+
+  // create the system variable name
+  strncat( acName, CHOICES_SUFFIX, NAMSIZ - strlen( acName ) - 1 );
+
+  // write the file header
+  sprintf( acTemp, "# <%s> written on %s\n\n", acName, acDate );
+  fputs( acTemp, pxFile );
+
+  return pxFile;
+}
+
+////////////////////////////////////////////////////////////////
+// Return the length of the option string following the tag or -1 if not found
+// if acOption != NULL, then output the option string following the tag to acOption
+static int Read( FILE* pxFile, const char* zTag, char* acOption, int iBufSiz )
+{
+  char acLine[ 256 ];
+  char* pcChar;
+  int iLength = -1;
+
+  // scan the file
+  while( fgets( acLine, sizeof( acLine ), pxFile ) != NULL )
+  {
+    if( *acLine != CHOICES_COMMENT_CHAR && ( pcChar = strchr( acLine, '=' ) ) != NULL )
+    {
+      // valid line
+      if( strncmp( acLine, zTag, pcChar - acLine ) == 0 )
+      {
+        // match found - return the length ignoring the trailing newline
+        iLength = strlen( pcChar + 1 ) - 1;
+        if( acOption != NULL )
+        {
+          // zap the trailing newline
+          *( pcChar + 1 + iLength ) = '\0';
+
+          // copy the option
+          *acOption = '\0';
+          strncpy( acOption, pcChar + 1, iBufSiz - 1 );
+        }
+        break;
+      }
+    }
+  }
+
+  return iLength;
+}
+
+
+
+////////////////////////////////////////////////////////////////
+// search for the tag while copying file
+// update option when tag found
+// append at end if tag not found
+static void Write( FILE* pxOutFile, FILE* pxInFile, const char* zTag, const char* zString )
+{
+  char acLine[ 256 ];
+  char* pcChar;
+  bool bDone = FALSE;
+
+  // scan the input file
+  if( pxInFile )
+  {
+    while( fgets( acLine, sizeof( acLine ), pxInFile ) != NULL )
+    {
+      if( !bDone && *acLine != CHOICES_COMMENT_CHAR && ( pcChar = strchr( acLine, '=' ) ) != NULL )
+      {
+        // valid line - check tag
+        if( strncmp( acLine, zTag, pcChar - acLine ) == 0 )
+        {
+          // tag matches - replace the option string
+          *(++pcChar) = '\0';;
+          if( zString != NULL )
+          {
+            strncat( pcChar, zString, sizeof(acLine) - (pcChar - acLine) - 1 );
+          }
+          strcat( pcChar, "\n" );
+          bDone = TRUE;
+          break;
+        }
+      }
+
+      // write to output
+      if( fputs( acLine, pxOutFile ) == EOF )
+        x_THROW_LAST_ERROR();
+    }
+    if( ferror( pxInFile ) )
+      x_THROW_LAST_ERROR();
+  }
+
+  if( !bDone )
+  {
+    // new tag - add it to the end of the output file
+    sprintf( acLine, "%s=%s\n", zTag, zString );
+    if( fputs( acLine, pxOutFile ) == EOF )
+      x_THROW_LAST_ERROR();
+  }
+}
+
+
+
+////////////////////////////////////////////////////////////////
+// write string at tag
+static void SetString( const char* zTag, const char* zString )
+{
+  FILE* pxInFile;
+  FILE* pxOutFile;
+  x_exception xx;
+  char acTmpNam[256];
+  char acFileName[256];
+
+  // open input file
+  GetFileName( acFileName, NAMSIZ );
+  pxInFile = fopen( acFileName, "r" );
+  if( pxInFile == NULL )
+  {
+    // no in file found - nothing to copy
+    pxOutFile =  NewFile( acFileName );
+  }
+  else
+  {
+    // open temporary output file
+    strcpy( acTmpNam, "<Wimp$ScrapDir>.Choices" );
+    x_TRY( &xx )
+      pxOutFile = fopen( acTmpNam, "w" );
+
+    x_CATCH( &xx )
+    {
+      fclose( pxInFile );
+      x_RETHROW( &xx );
+    }
+  }
+
+  // we have valid file handles - try to write the option
+  x_TRY( &xx )
+    Write( pxOutFile, pxInFile, zTag, zString );
+
+  // catch any errors
+  x_CATCH( &xx )
+  {
+    // close the files
+    fclose( pxInFile );
+    fclose( pxOutFile );
+
+    // delete the temp file
+    remove( acTmpNam );
+
+    // propagate the error
+    x_RETHROW( &xx );
+  }
+
+  // success - close and tidy up the files
+  fclose( pxOutFile );
+
+  if( pxInFile )
+  {
+    fclose( pxInFile );
+
+    // rename the temp file
+    osfscontrol_copy( acTmpNam, acFileName,
+        	      osfscontrol_COPY_FORCE |
+        	      osfscontrol_COPY_DELETE |
+        	      osfscontrol_COPY_LOOK,
+        	      0, 0, 0, 0, 0 );
+  }
+}
+
+
+
+/****************************************************************
+** Global Interface
+****************************************************************/
+
+////////////////////////////////////////////////////////////////
+//  Returns TRUE if zTag exists in choices file
+extern bool Choices_Exists( const char* zTag )
+{
+  FILE* pxFile;
+  int iLength = -1;
+  char acName[NAMSIZ];
+
+  pxFile = fopen( GetFileName( acName, NAMSIZ ), "r" );
+
+  if( pxFile )
+  {
+    // we have a file handle - find the tag
+    iLength = Read( pxFile, zTag, NULL, 0 );
+    fclose( pxFile );
+  }
+
+  return( iLength >= 0 );
+}
+
+
+////////////////////////////////////////////////////////////////
+//  Reads the string associated with zTag from the application choices file
+//  Returns:  string length, or -1 if tag not found
+//  Outputs:  if acString != NULL: at most iBufSiz chars into acString.
+//    	      	else returns string length (required buffer size - 1).
+//    	      Outputs zDefault if tag not found
+extern int Choices_GetString( const char* zTag, char* acString, int iBufSize, const char* zDefault )
+{
+  FILE* pxFile;
+  x_exception xx;
+  int iLength = -1;
+  char acName[NAMSIZ];
+
+
+  // try to open file
+  pxFile = fopen( GetFileName( acName, sizeof( acName ) ), "r" );
+  if( pxFile != NULL )
+  {
+  // we have valid a file handle - try to read the option
+    x_TRY( &xx )
+      iLength = Read( pxFile, zTag, acString, iBufSize );
+
+    x_CATCH( &xx )
+    ;
+
+    fclose( pxFile );
+  }
+
+  if( iLength < 0 )
+  {
+    iLength = strlen( zDefault );
+    if( acString )
+    {
+      *acString = '\0';
+      strncat( acString, zDefault, iBufSize - 1 );
+    }
+  }
+  return iLength;
+}
+
+
+////////////////////////////////////////////////////////////////
+// Reads the integer associated with zTag from the application choices file
+//  Returns:  integer value
+//  Returns iDefault if tag not found
+extern int Choices_GetInt( const char* zTag, int iDefault )
+{
+  FILE* pxFile;
+  x_exception xx;
+  int iLength;
+  char acBuf[16];
+  char acName[NAMSIZ];
+  int iInt = iDefault;
+
+  // try to open file
+  pxFile = fopen( GetFileName( acName, sizeof( acName ) ), "r" );
+  if( pxFile != NULL )
+  {
+    // we have valid a file handle - try to read the option
+    x_TRY( &xx )
+      iLength = Read( pxFile, zTag, acBuf, sizeof( acBuf ) );
+
+    x_CATCH( &xx )
+    ;
+
+    fclose( pxFile );
+  }
+
+  if( iLength > 0 )
+    iInt = atoi( acBuf );
+
+  return iInt;
+}
+
+
+
+////////////////////////////////////////////////////////////////
+// set the string at zTag to zString
+// if zTag is not found, then it is created at end of file
+// throws exception on file error
+extern void Choices_SetString( const char* zTag, const char* zString )
+{
+  SetString( zTag, zString );
+}
+
+
+
+////////////////////////////////////////////////////////////////
+// set the int at zTag to iInt
+// if zTag is not found, then it is created at end of file
+// throws exception on file error
+extern void Choices_SetInt( const char* zTag, int iInt )
+{
+  char acInt[16];
+
+  // convert it to a string and write to file.
+  sprintf( acInt, "%d", iInt );
+  SetString( zTag, acInt );
+}
+
+
+
+/*** END ***/

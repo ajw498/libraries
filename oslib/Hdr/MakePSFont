@@ -1,0 +1,33 @@
+;Assembler header file for MakePSFont
+;written by DefMod (Oct 26 2000) on Tue Dec 12 20:10:11 2000
+;Jonathan Coxhead, jonathan@doves.demon.co.uk, 20 June 1995
+
+        [       :LNOT: :DEF: Get_Types
+        GBLS    Get_Types
+        ]
+        [       :LNOT: :DEF: Types_Hdr
+Get_Types                       SETS    "GET OSLib:oslib.Hdr.Types"
+        |
+Get_Types                       SETS    ""
+        ]
+        $Get_Types
+
+        [       :LNOT: :DEF: Get_OS
+        GBLS    Get_OS
+        ]
+        [       :LNOT: :DEF: OS_Hdr
+Get_OS                          SETS    "GET OSLib:oslib.Hdr.OS"
+        |
+Get_OS                          SETS    ""
+        ]
+        $Get_OS
+
+        [       :LNOT: :DEF: MakePSFont_Hdr
+        GBLS    MakePSFont_Hdr
+
+;Symbols for SWI's and SWI reason codes
+XMakePSFont_MakeFont            *       &63440
+MakePSFont_MakeFont             *       &43440
+
+        ]
+        END

@@ -1,0 +1,114 @@
+/*
+ * Title  : Err.ReportErr.c
+ * Purpose: provide error reporting in wimp programs (replaces werr from RiscOSLib)
+ * History: 941103      created
+ *
+ */
+
+/*
+      OSLibSupport is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 1, or (at your option)
+   any later version.
+
+      OSLibSupport is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+      You should have received a copy of the GNU General Public License
+   along with this programme; if not, write to the Free Software
+   Foundation, Inc, 675 Mass Ave, Cambridge, MA 02139, U S A.
+*/
+
+#include <stdarg.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+#ifndef os_H
+#include "oslib/os.h"
+#endif
+
+#if !defined( wimp_H )
+  #include "oslib/wimp.h"
+#endif
+
+#if !defined( Task_H )
+#include "Task.h"
+#endif
+
+#include "Err.h"
+
+/***************************************************************
+** Description:   Display a (possibly fatal) error message in a pop-up
+**                dialogue box.
+**                Assumes Application Name to be that registered by
+**                wimp_initialise; application sprite name to be that name
+**                prefixed by !.
+**
+** Parameters:    BOOL bFatal    -- non-zero indicates fatal error; exit() is called
+**                                      after message is acknowledged.
+**                char* zFormat  -- printf-style format string
+**                ...            -- variable arg list of message to be printed
+**
+** Returns:       void.
+**
+** Processing:  formats the error string using sprintf() formatting
+**              calls Task_GetName to obtain a name (or "Unknown" if not found)
+**              calls SWI Wimp_ReportError with errnum = 0.
+**                      if not bFatal, then provide 'information' icon and 'Continue' button
+**                      else provide ''error' icon and 'Quit' button (RO3.5 and above)
+**              calls exit(1) if bFatal
+**
+*****************************************************************/
+
+#define NAMEBUF_SIZ 64
+
+void Err_ReportError( bool bFatal, char* zFormat, ...)
+  {
+  va_list xVa;
+  os_error xErrBlock;
+  char* zQuit = "Quit";
+  char* zName;
+  char* zButtons;
+  char acTaskName[ BUFSIZ ];
+  wimp_error_box_selection xClick;
+  wimp_error_box_flags iFlags = 1<<8;   /* new (RO3.5) style call */
+
+  /* error code = 0 */
+  xErrBlock.errnum = 0;
+
+  // get the task name from the Wimp
+  if( Task_GetName( acTaskName, BUFSIZ ) == NULL && *acTaskName != '\0' )
+    {
+    zName = acTaskName;        /* pointer to task name */
+    }
+  else
+    {
+    zName = "???";     /* default */
+    }
+
+  if( !bFatal )
+    {
+    iFlags |= (1<<0) | ( 1<<9); // Information; provide CONTINUE if not fatal
+    zButtons = NULL;             // default buttons
+    }
+  else
+    {
+    iFlags |= (0<<1) | ( 3<<9);         // else Error;
+    zButtons = zQuit;            // provide "Quit"
+    }
+
+  /* format the error string */
+  va_start(xVa, zFormat);
+  vsprintf(&xErrBlock.errmess[0], zFormat, xVa);
+  va_end(xVa);
+
+  /* report the error - no return on RO3.5 fatal error */
+  xwimp_report_error_by_category( &xErrBlock, iFlags, zName, NULL, NULL, NULL, &xClick );
+
+  /* abandon the client if fatal error pre RO3.5 */
+  if ( bFatal ) exit( TRUE );
+  }
+
+/* end */

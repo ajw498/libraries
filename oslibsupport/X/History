@@ -1,0 +1,10 @@
+SupportLib.x.history
+
+950410	    Original version in osLib.examples
+970913	TV  Amendments for StronArm compatibility.
+      	    Instead of setting up the return block on the stack, it is now set up in
+      	    a static data array. Up to 256 entries are allowed.
+981221  TV  fixed bug giving wrong offsets in International_Error.
+      	    International_error was defined as a variable size, yet a pointer based
+      	    on os_error was used to access its components. Changed to two os_error 
+      	    pointers

@@ -1,0 +1,113 @@
+;Assembler header file for ServiceInternational
+;written by DefMod (Oct 26 2000) on Tue Dec 12 18:52:47 2000
+;Jonathan Coxhead, jonathan@doves.demon.co.uk, 29 Jun 1995
+
+        [       :LNOT: :DEF: Get_Types
+        GBLS    Get_Types
+        ]
+        [       :LNOT: :DEF: Types_Hdr
+Get_Types                       SETS    "GET OSLib:oslib.Hdr.Types"
+        |
+Get_Types                       SETS    ""
+        ]
+        $Get_Types
+
+        [       :LNOT: :DEF: Get_OS
+        GBLS    Get_OS
+        ]
+        [       :LNOT: :DEF: OS_Hdr
+Get_OS                          SETS    "GET OSLib:oslib.Hdr.OS"
+        |
+Get_OS                          SETS    ""
+        ]
+        $Get_OS
+
+        [       :LNOT: :DEF: Get_Territory
+        GBLS    Get_Territory
+        ]
+        [       :LNOT: :DEF: Territory_Hdr
+Get_Territory                   SETS    "GET OSLib:oslib.Hdr.Territory"
+        |
+Get_Territory                   SETS    ""
+        ]
+        $Get_Territory
+
+        [       :LNOT: :DEF: ServiceInternational_Hdr
+        GBLS    ServiceInternational_Hdr
+
+;Symbols for constants
+Error_UnknownAlphabet           *       &640
+Error_UnknownCountry            *       &641
+Error_UnknownKeyboard           *       &642
+
+;Symbols for SWI's and SWI reason codes
+Service_International           *       &43
+
+ServiceInternational_CountryNameToCountryNumber *       &0
+   ;Entry
+   ;  R1 = &43
+   ;  R2 = &0
+   ;  R3 -> country_name (String)
+   ;Exit
+   ;  R1 = unclaimed (Bool)
+   ;  R4 = country_no (Territory_T)
+
+ServiceInternational_AlphabetNameToAlphabetNumber *       &1
+   ;Entry
+   ;  R1 = &43
+   ;  R2 = &1
+   ;  R3 -> alphabet_name (String)
+   ;Exit
+   ;  R1 = unclaimed (Bool)
+   ;  R4 = alphabet_no (Territory_AlphabetNumber)
+
+ServiceInternational_CountryNumberToCountryName *       &2
+   ;Entry
+   ;  R1 = &43
+   ;  R2 = &2
+   ;  R3 = country_no (Territory_T)
+   ;  R4 = buffer (pointer to String)
+   ;  R5 = size (Int)
+   ;Exit
+   ;  R1 = unclaimed (Bool)
+   ;  R5 = used (Int)
+
+ServiceInternational_AlphabetNumberToAlphabetName *       &3
+   ;Entry
+   ;  R1 = &43
+   ;  R2 = &3
+   ;  R3 = alphabet_no (Territory_AlphabetNumber)
+   ;  R4 = buffer (pointer to String)
+   ;  R5 = size (Int)
+   ;Exit
+   ;  R1 = unclaimed (Bool)
+   ;  R5 = used (Int)
+
+ServiceInternational_CountryNumberToAlphabetNumber *       &4
+   ;Entry
+   ;  R1 = &43
+   ;  R2 = &4
+   ;  R3 = country_no (Territory_T)
+   ;Exit
+   ;  R1 = unclaimed (Bool)
+   ;  R4 = alphabet_no (Territory_AlphabetNumber)
+
+ServiceInternational_DefineChars *       &5
+   ;Entry
+   ;  R1 = &43
+   ;  R2 = &5
+   ;  R3 = alphabet_no (Territory_AlphabetNumber)
+   ;  R4 = first (Byte)
+   ;  R5 = last (Byte)
+   ;Exit
+   ;  R1 = unclaimed (Bool)
+
+ServiceInternational_NewKeyboard *       &6
+   ;Entry
+   ;  R1 = &43
+   ;  R2 = &6
+   ;  R3 = keyboard_no (Int)
+   ;  R4 = alphabet_no (Territory_AlphabetNumber)
+
+        ]
+        END

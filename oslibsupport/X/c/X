@@ -1,0 +1,401 @@
+/****************************************************************
+** Title  :   	SupportLib.c.x.c.x
+**
+** Purpose:   	RiscOs Exception Handling
+**
+** Copyright:   ©OSLib
+**
+** History:     970913	TV  Port from OSLib x with StrongArm amendments
+**              981221  TV  fixed bug giving wrong offsets in International_Error
+**
+*****************************************************************/
+/*
+      OSLib is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 1, or (at your option)
+   any later version.
+
+      OSLib is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+      You should have received a copy of the GNU General Public License
+   along with this programme; if not, write to the Free Software
+   Foundation, Inc, 675 Mass Ave, Cambridge, MA 02139, U S A.
+*/
+
+/*x.c*/
+
+/*From CLib*/
+#include "kernel.h"
+#include <setjmp.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <string.h>
+
+/*From OSLib*/
+#include "oslib/macros.h"
+#include "oslib/messagetrans.h"
+#include "oslib/os.h"
+
+/*From Support*/
+#include "x.h"
+
+#if 0   // TV 981221
+//  You can't do this!
+//  If the pointer is declared as International_Error, then the offsets for
+//  errnum and errtoken will be wrong.
+
+/*The type of a Shared C Library international error block*/
+typedef struct
+{
+  bits defaultnum;
+  char errmess [252];
+  bits errnum;
+  char errtoken [252];
+}
+International_Error;
+
+/*A macro to declare them*/
+#define LOCAL_INTERNATIONAL_ERROR(id, token, num, mess) \
+  static struct \
+  { \
+    bits defaultnum; \
+    char errmess [sizeof mess + 1]; \
+    bits errnum; \
+    char errtoken [sizeof token + 1]; \
+  } id ## _ = {num, mess, num, token}; \
+  static International_Error *id = (International_Error *) &id ## _
+
+#else
+ typedef struct
+ {
+   os_error* dflt;
+   os_error* token;
+ }
+ International_Error;
+
+/*A macro to declare them*/
+#define LOCAL_INTERNATIONAL_ERROR(id, token, num, mess) \
+  static struct \
+  { \
+    bits defaultnum; \
+    char errmess [sizeof mess + 1]; \
+  } id ## _dflt_ = { num, mess }; \
+\
+  static struct \
+  { \
+    bits errnum; \
+    char errtoken [sizeof token + 1]; \
+  } id ## _token_ = {num, token}; \
+\
+  static International_Error id ## _ = { ( os_error *) &id ## _dflt_ , (os_error*) &id ## _token_ }; \
+  static International_Error *id = &id ## _
+
+#endif
+
+/* international error blocks (for use with Copy_Error())*/
+LOCAL_INTERNATIONAL_ERROR(  Error_Stack,
+      	      	      	    "C64",
+      	      	      	    error_STK_OFLO,
+      	      	      	    "Not enough memory, allocate failed" );
+
+LOCAL_INTERNATIONAL_ERROR(  Error_Unknown,
+      	      	      	    "C35",
+      	      	      	    1,
+      	      	      	    "No error (errno = 0)" );
+
+/* synchronisation error */
+x_LOCAL_ERROR( Error_Sync, 1 + 1U<<30, "Try/Catch Synchronisation Error" );
+
+/* exception stack overflow */
+x_LOCAL_ERROR( Error_XStack, 2 + 1U<<30, "Too many nested x_TRY blocks" );
+
+
+/* error blocks with tokens in (for use with MessageTrans).*/
+x_LOCAL_ERROR( Error_Escape, error_ESCAPE, "Escape" );
+x_LOCAL_ERROR( Error_No_Memory, os_GLOBAL_NO_MEM, "NoMem" );
+
+
+static int Signals [] = { SIGINT, SIGSTAK, SIGOSERROR };
+
+
+/*------------------------------------------------------------------------*/
+static os_error *Copy_Error (International_Error *ie)
+{
+  messagetrans_control_block cb;
+  os_error *e;
+
+   /*This code is what the SharedCLibrary does, except that this happens
+      every time a message is to be looked up, and the module only opens
+      the file at most once. We don't really care about this.*/
+
+#if 0     // TV 981221
+// this code modified inline with change to definition of International_Error
+
+  if( xmessagetrans_open_file( &cb, "SharedCLibrary:Messages", NULL ) == NULL )
+  {
+    e = xmessagetrans_error_lookup( ( os_error* )&ie -> errnum,
+      	      	      	      	    &cb,
+      	      	      	            NULL,
+      	      	      	            0,
+      	      	      	            "SharedCLibrary",
+      	      	      	            NULL, NULL, NULL );
+      xmessagetrans_close_file( &cb );
+   }
+   else
+      e = (os_error *) &ie->defaultnum;
+
+#else
+
+  if( xmessagetrans_open_file( &cb, "SharedCLibrary:Messages", NULL ) == NULL )
+  {
+    e = xmessagetrans_error_lookup( ie -> token,
+      	      	      	      	    &cb,
+      	      	      	            NULL,
+      	      	      	            0,
+      	      	      	            "SharedCLibrary",
+      	      	      	            NULL, NULL, NULL );
+      xmessagetrans_close_file( &cb );
+   }
+   else
+      e =  ie -> dflt;
+#endif
+
+   return e;
+}
+
+
+#if 0   //  TV 970913
+/****************************************************************
+**  For StrongArm Compatibility, the Trampoline is not usable.
+**  Instead, the x library now maintains a local stack of pointers to each
+**  exception data block.
+**  The downside of this is that the exception nesting depth is limited.
+**  the scheme could be extended by provising additional stack chunks as
+**  each one fills up; that is currently considered unnecessary.
+****************************************************************/
+
+/*------------------------------------------------------------------------*/
+static void Try_Handler( int sig, x_exception *x )
+
+   /*Handler for use after x_try().*/
+
+{  os_error *error = NULL /**/;
+
+   /*Save this condition in the buffer.*/
+   switch (sig)
+   {  case SIGINT:
+         error = xmessagetrans_error_lookup (Error_Escape, NULL, NULL,
+               0, SKIP, SKIP, SKIP, SKIP);
+      break;
+
+      case SIGSTAK:
+         error = Copy_Error (Error_Stack);
+      break;
+
+      case SIGOSERROR:
+         error = x__last_error ();
+      break;
+   }
+
+   /*Longjump back to the x_TRY() call.*/
+   longjmp (x->buf, (int) (x->error = error));
+}
+/*------------------------------------------------------------------------*/
+void x__try( x_exception *x )
+
+{  int sig;
+
+   /*trampoline*/
+#if 0
+   /*branch using B*/
+   x->trampoline [0] = 0xE24F1008;
+      /*i e, 'ADR R1, x,' which is the same as 'SUB R1, PC, #8'*/
+   x->trampoline [1] = 0xEA000000 | ((int) &Try_Handler -
+         (int) &x->trampoline [1] - 8 >> 2 & 0xFFFFFF);
+      /*i e, 'B Try_Handler'*/
+#else
+   /*branch using LDR PC*/
+   x->trampoline [0] = 0xE24F1008;
+      /*i e, 'ADR R1, x,' which is the same as 'SUB R1, PC, #8'*/
+   x->trampoline [1] = 0xE591F008;
+      /*i e, 'LDR PC, [R1, #8]'*/
+   x->trampoline [2] = (int) &Try_Handler;
+      /*i e, '& Try_Handler'*/
+#endif
+
+   /*previous*/
+   for (sig = 0; sig < COUNT (Signals); sig++)
+      if( ( x-> previous[sig] = signal( Signals[sig], Try_Handler ) ) == SIG_ERR )
+         x->previous[sig] = NULL;
+
+   /*error*/
+   x->error = NULL;
+
+   /*buf*/
+   /*Done in calling macro.*/
+}
+
+/*------------------------------------------------------------------------*/
+void x__catch (x_exception *x)
+
+{  int sig;
+
+   /*Restore the caller's handlers.*/
+   for (sig = 0; sig < COUNT (Signals); sig++)
+      if (x->previous [sig] != NULL)
+         (void) signal (Signals [sig], x->previous [sig]);
+}
+
+
+#else
+
+// start off with a stack chunk of adequate size to hold initial exception blocks
+static x_exception*   gapxX[ x_MAXDEPTH ];  // stack
+static x_exception**  gppxX = gapxX;	    // stack pointer
+
+/*------------------------------------------------------------------------*/
+
+// signal handler
+static void SigHandler( int iSignal )
+{
+  os_error *pxError = NULL /**/;
+
+  /*Save this condition in the buffer.*/
+  switch( iSignal )
+  {
+    case SIGINT:
+      pxError = xmessagetrans_error_lookup( Error_Escape, NULL, NULL, 0, SKIP, SKIP, SKIP, SKIP );
+      break;
+
+    case SIGSTAK:
+      pxError = Copy_Error( Error_Stack );
+      break;
+
+    case SIGOSERROR:
+      pxError = x__last_error();
+      break;
+   }
+
+   /*Longjump back to the x_TRY() call.*/
+   longjmp( (*(gppxX - 1)) -> buf, (int)( (*(gppxX - 1)) -> error = pxError));
+}
+
+
+/*------------------------------------------------------------------------*/
+void x__try( x_exception* pxX )
+{
+  int sig;
+
+  // enter on exception stack
+  if( gppxX < gapxX + x_MAXDEPTH )
+    *gppxX++ = pxX;
+  else
+    x_THROW( Error_XStack ); // throw an error on exception stack overflow
+
+
+  /* Register handlers for each of the signal types which we're prepared to handle
+  ** We maintain a record of the previous handlers so that we can restore them.
+  ** It is more efficient to place the pointers on the caller's stack than to
+  ** allocate our own memory */
+  for( sig = 0; sig < COUNT (Signals); sig++ )
+  {
+    pxX -> previous[sig] = signal( Signals[sig], SigHandler );
+    if( pxX -> previous[sig] == SIG_ERR )
+      pxX -> previous[sig] = NULL;
+  }
+
+   /*error*/
+   pxX -> error = NULL;
+
+   /*buf*/
+   /*Done in calling macro.*/
+}
+
+
+/*------------------------------------------------------------------------*/
+void x__catch( x_exception* pxX )
+{
+  int sig;
+
+  /*Restore the caller's handlers.*/
+  for( sig = 0; sig < COUNT (Signals); sig++ )
+  {
+    if( pxX -> previous[sig] != NULL )
+      signal( Signals [sig], pxX -> previous [sig] );
+  }
+
+  /* remove the x_exception entry from the exception stack */
+  if( pxX == *(--gppxX) )
+    *gppxX = NULL;
+  else
+    x_THROW( Error_Sync );  // try/catch blocks out of sync
+}
+
+
+#endif
+
+
+/*------------------------------------------------------------------------*/
+os_error *x__last_error (void)
+{
+  os_error *last_error;
+  static os_error *Last_Error;
+
+   /*Messing about here because _kernel_last_oserror() returns NULL the
+      second time it's called*/
+
+  if ((last_error = (os_error *) _kernel_last_oserror() ) != NULL )
+    Last_Error = last_error;
+
+  if (Last_Error == NULL)
+    Last_Error = Copy_Error (Error_Unknown);
+
+  return Last_Error; /*never NULL*/
+}
+
+
+/*------------------------------------------------------------------------*/
+void *x__alloc (int size)
+{
+  void *ptr;
+
+   if ((ptr = malloc (size)) == NULL && size != 0)
+      messagetrans_error_lookup (Error_No_Memory, NULL, NULL, 0, SKIP,
+            SKIP, SKIP, SKIP);
+
+   return ptr;
+}
+
+
+/*------------------------------------------------------------------------*/
+void *x__calloc (int count, int size)
+{
+  void *ptr;
+
+  if ((ptr = calloc (count, size)) == NULL && size != 0 && count != 0)
+      messagetrans_error_lookup (Error_No_Memory, NULL, NULL, 0, SKIP,
+            SKIP, SKIP, SKIP);
+
+   return ptr;
+}
+
+
+/*------------------------------------------------------------------------*/
+void x__free (void *ptr, int size) {NOT_USED (size) free (ptr);}
+
+
+/*------------------------------------------------------------------------*/
+void *x__realloc (void *ptr, int old_size, int size)
+{
+//  NOT_USED (old_size)
+//  NOT_USED (size)
+
+  if ((ptr = realloc (ptr, size)) == NULL && size != 0)
+      messagetrans_error_lookup (Error_No_Memory, NULL, NULL, 0, SKIP,
+            SKIP, SKIP, SKIP);
+
+   return ptr;
+}
