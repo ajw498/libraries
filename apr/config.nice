@@ -1,0 +1,9 @@
+#! /bin/sh
+#
+# Created by configure
+
+"./configure" \
+"--host=arm-riscos-aof" \
+"--prefix=/home/riscos/cross/local" \
+"-C" \
+"$@"

@@ -10,6 +10,8 @@ LIBPNG=libpng-1.2.0
 REGEX=regex
 LIBJPEG=jpeg-6b
 LIBGD=gd-1.8.4
+APR=apr
+APRUTIL=apr-util
 
 PREFIX=/home/riscos/cross/local
 
@@ -43,5 +45,23 @@ EOF
 #./configure --host=arm-riscos-aof --prefix=$PREFIX \
 #&& make clean && make && make install-lib) || exit 1
 
-(cd $LIBGD; \
-make clean && make PREFIX=$PREFIX && make install PREFIX=$PREFIX) || exit 1
+#(cd $LIBGD; \
+#make clean && make PREFIX=$PREFIX && make install PREFIX=$PREFIX) || exit 1
+
+cat > $APR/config.cache << EOF
+ac_cv_prog_cc_g=\${ac_cv_prog_cc_g=no}
+lt_cv_prog_cc_can_build_shared=\${lt_cv_prog_cc_can_build_shared=no}
+lt_cv_prog_cc_pic_works=\${lt_cv_prog_cc_pic_works=no}
+ac_cv_sizeof_off_t=${ac_cv_sizeof_off_t=4}
+ac_cv_sizeof_pid_t=${ac_cv_sizeof_pid_t=4}
+ac_cv_sizeof_size_t=${ac_cv_sizeof_size_t=4}
+ac_cv_sizeof_ssize_t=${ac_cv_sizeof_ssize_t=4}
+ac_cv_func_setpgrp_void=${ac_cv_func_setpgrp_void=no}
+ac_cv_working_getnameinfo=${ac_cv_working_getnameinfo=no}
+ac_cv_working_getaddrinfo=${ac_cv_working_getaddrinfo=no}
+EOF
+
+(cd $APR; \
+./configure --host=arm-riscos-aof --prefix=$PREFIX -C \
+&& make clean && make && make install) || exit 1
+
