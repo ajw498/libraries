@@ -820,6 +820,21 @@ APU_DECLARE(apr_status_t) apr_brigade_write(apr_bucket_brigade *b,
                                             const char *str, apr_size_t nbyte);
 
 /**
+ * This function writes multiple strings into a bucket brigade.
+ * @param b The bucket brigade to add to
+ * @param flush The flush function to use if the brigade is full
+ * @param ctx The structure to pass to the flush function
+ * @param iovec The strings to add (address plus length for each)
+ * @param nvec The number of entries in iovec
+ * @return APR_SUCCESS or error code
+ */
+APU_DECLARE(apr_status_t) apr_brigade_writev(apr_bucket_brigade *b,
+                                             apr_brigade_flush flush,
+                                             void *ctx,
+                                             const struct iovec *vec,
+                                             apr_size_t nvec);
+
+/**
  * This function writes a string into a bucket brigade.
  * @param bb The bucket brigade to add to
  * @param flush The flush function to use if the brigade is full
@@ -1078,7 +1093,7 @@ APU_DECLARE_DATA extern const apr_bucket_type_t apr_bucket_type_pool;
 APU_DECLARE_DATA extern const apr_bucket_type_t apr_bucket_type_pipe;
 /**
  * The IMMORTAL bucket type.  This bucket represents a segment of data that
- * the creator is willing to take responsability for.  The core will do
+ * the creator is willing to take responsibility for.  The core will do
  * nothing with the data in an immortal bucket
  */
 APU_DECLARE_DATA extern const apr_bucket_type_t apr_bucket_type_immortal;
@@ -1423,7 +1438,6 @@ APU_DECLARE(apr_bucket *) apr_bucket_file_make(apr_bucket *b, apr_file_t *fd,
                                                apr_off_t offset,
                                                apr_size_t len, apr_pool_t *p);
 
-#if APR_HAS_MMAP
 /**
  * Enable or disable memory-mapping for a FILE bucket (default is enabled)
  * @param b The bucket
@@ -1432,7 +1446,6 @@ APU_DECLARE(apr_bucket *) apr_bucket_file_make(apr_bucket *b, apr_file_t *fd,
  */
 APU_DECLARE(apr_status_t) apr_bucket_file_enable_mmap(apr_bucket *b,
                                                       int enabled);
-#endif /* APR_HAS_MMAP */
 
 /** @} */
 #ifdef __cplusplus

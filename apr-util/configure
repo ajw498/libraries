@@ -824,6 +824,11 @@ if test -n "$ac_init_help"; then
 
   cat <<\_ACEOF
 
+Optional Features:
+  --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
+  --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
+  --enable-layout=LAYOUT
+
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
@@ -1522,6 +1527,201 @@ echo "${ECHO_T}$ac_cv_mkdir_p" >&6
   else
       mkdir_p="$abs_srcdir/build/mkdir.sh"
   fi
+
+
+get_version="$abs_srcdir/build/get-version.sh"
+version_hdr="$abs_srcdir/include/apu_version.h"
+APRUTIL_MAJOR_VERSION="`$get_version major $version_hdr APU`"
+APRUTIL_DOTTED_VERSION="`$get_version all $version_hdr APU`"
+
+
+
+
+echo "APR-util Version: ${APRUTIL_DOTTED_VERSION}"
+
+
+# Check whether --enable-layout or --disable-layout was given.
+if test "${enable_layout+set}" = set; then
+  enableval="$enable_layout"
+
+  LAYOUT=$enableval
+
+fi;
+
+if test -z "$LAYOUT"; then
+  LAYOUT="apr-util"
+fi
+
+  if test ! -f $srcdir/config.layout; then
+    echo "** Error: Layout file $srcdir/config.layout not found"
+    echo "** Error: Cannot use undefined layout '$LAYOUT'"
+    exit 1
+  fi
+  pldconf=./config.pld
+
+  sed -e "1,/[ 	]*<[lL]ayout[ 	]*$LAYOUT[ 	]*>[ 	]*/d" \
+      -e '/[ 	]*<\/Layout>[ 	]*/,$d' \
+      -e "s/^[ 	]*//g" \
+      -e "s/:[ 	]*/=\'/g" \
+      -e "s/[ 	]*$/'/g" \
+      $srcdir/config.layout > $pldconf
+  layout_name=$LAYOUT
+  . $pldconf
+  rm $pldconf
+  for var in prefix exec_prefix bindir sbindir libexecdir mandir \
+             sysconfdir datadir  \
+             includedir localstatedir runtimedir logfiledir libdir \
+             installbuilddir libsuffix; do
+    eval "val=\"\$$var\""
+    case $val in
+      *+)
+        val=`echo $val | sed -e 's;\+$;;'`
+        eval "$var=\"\$val\""
+        autosuffix=yes
+        ;;
+      *)
+        autosuffix=no
+        ;;
+    esac
+    val=`echo $val | sed -e 's:\(.\)/*$:\1:'`
+    val=`echo $val | sed -e 's:[\$]\([a-z_]*\):$\1:g'`
+    if test "$autosuffix" = "yes"; then
+      if echo $val | grep apache >/dev/null; then
+        addtarget=no
+      else
+        addtarget=yes
+      fi
+      if test "$addtarget" = "yes"; then
+        val="$val/apache2"
+      fi
+    fi
+    eval "$var='$val'"
+  done
+
+
+
+echo "$as_me:$LINENO: checking for chosen layout" >&5
+echo $ECHO_N "checking for chosen layout... $ECHO_C" >&6
+echo "$as_me:$LINENO: result: $layout_name" >&5
+echo "${ECHO_T}$layout_name" >&6
+
+
+ac_prev=
+for ac_option
+do
+  # If the previous option needs an argument, assign it.
+  if test -n "$ac_prev"; then
+    eval "$ac_prev=\$ac_option"
+    ac_prev=
+    continue
+  fi
+
+  ac_optarg=`expr "x$ac_option" : 'x[^=]*=\(.*\)'`
+
+  case $ac_option in
+
+  -bindir | --bindir | --bindi | --bind | --bin | --bi)
+    ac_prev=bindir ;;
+  -bindir=* | --bindir=* | --bindi=* | --bind=* | --bin=* | --bi=*)
+    bindir="$ac_optarg" ;;
+
+  -datadir | --datadir | --datadi | --datad | --data | --dat | --da)
+    ac_prev=datadir ;;
+  -datadir=* | --datadir=* | --datadi=* | --datad=* | --data=* | --dat=* \
+  | --da=*)
+    datadir="$ac_optarg" ;;
+
+  -exec-prefix | --exec_prefix | --exec-prefix | --exec-prefi \
+  | --exec-pref | --exec-pre | --exec-pr | --exec-p | --exec- \
+  | --exec | --exe | --ex)
+    ac_prev=exec_prefix ;;
+  -exec-prefix=* | --exec_prefix=* | --exec-prefix=* | --exec-prefi=* \
+  | --exec-pref=* | --exec-pre=* | --exec-pr=* | --exec-p=* | --exec-=* \
+  | --exec=* | --exe=* | --ex=*)
+    exec_prefix="$ac_optarg" ;;
+
+  -includedir | --includedir | --includedi | --included | --include \
+  | --includ | --inclu | --incl | --inc)
+    ac_prev=includedir ;;
+  -includedir=* | --includedir=* | --includedi=* | --included=* | --include=* \
+  | --includ=* | --inclu=* | --incl=* | --inc=*)
+    includedir="$ac_optarg" ;;
+
+  -infodir | --infodir | --infodi | --infod | --info | --inf)
+    ac_prev=infodir ;;
+  -infodir=* | --infodir=* | --infodi=* | --infod=* | --info=* | --inf=*)
+    infodir="$ac_optarg" ;;
+
+  -libdir | --libdir | --libdi | --libd)
+    ac_prev=libdir ;;
+  -libdir=* | --libdir=* | --libdi=* | --libd=*)
+    libdir="$ac_optarg" ;;
+
+  -libexecdir | --libexecdir | --libexecdi | --libexecd | --libexec \
+  | --libexe | --libex | --libe)
+    ac_prev=libexecdir ;;
+  -libexecdir=* | --libexecdir=* | --libexecdi=* | --libexecd=* | --libexec=* \
+  | --libexe=* | --libex=* | --libe=*)
+    libexecdir="$ac_optarg" ;;
+
+  -localstatedir | --localstatedir | --localstatedi | --localstated \
+  | --localstate | --localstat | --localsta | --localst \
+  | --locals | --local | --loca | --loc | --lo)
+    ac_prev=localstatedir ;;
+  -localstatedir=* | --localstatedir=* | --localstatedi=* | --localstated=* \
+  | --localstate=* | --localstat=* | --localsta=* | --localst=* \
+  | --locals=* | --local=* | --loca=* | --loc=* | --lo=*)
+    localstatedir="$ac_optarg" ;;
+
+  -mandir | --mandir | --mandi | --mand | --man | --ma | --m)
+    ac_prev=mandir ;;
+  -mandir=* | --mandir=* | --mandi=* | --mand=* | --man=* | --ma=* | --m=*)
+    mandir="$ac_optarg" ;;
+
+  -prefix | --prefix | --prefi | --pref | --pre | --pr | --p)
+    ac_prev=prefix ;;
+  -prefix=* | --prefix=* | --prefi=* | --pref=* | --pre=* | --pr=* | --p=*)
+    prefix="$ac_optarg" ;;
+
+  -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
+    ac_prev=sbindir ;;
+  -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
+  | --sbi=* | --sb=*)
+    sbindir="$ac_optarg" ;;
+
+  -sharedstatedir | --sharedstatedir | --sharedstatedi \
+  | --sharedstated | --sharedstate | --sharedstat | --sharedsta \
+  | --sharedst | --shareds | --shared | --share | --shar \
+  | --sha | --sh)
+    ac_prev=sharedstatedir ;;
+  -sharedstatedir=* | --sharedstatedir=* | --sharedstatedi=* \
+  | --sharedstated=* | --sharedstate=* | --sharedstat=* | --sharedsta=* \
+  | --sharedst=* | --shareds=* | --shared=* | --share=* | --shar=* \
+  | --sha=* | --sh=*)
+    sharedstatedir="$ac_optarg" ;;
+
+  -sysconfdir | --sysconfdir | --sysconfdi | --sysconfd | --sysconf \
+  | --syscon | --sysco | --sysc | --sys | --sy)
+    ac_prev=sysconfdir ;;
+  -sysconfdir=* | --sysconfdir=* | --sysconfdi=* | --sysconfd=* | --sysconf=* \
+  | --syscon=* | --sysco=* | --sysc=* | --sys=* | --sy=*)
+    sysconfdir="$ac_optarg" ;;
+
+  esac
+done
+
+# Be sure to have absolute paths.
+for ac_var in exec_prefix prefix
+do
+  eval ac_val=$`echo $ac_var`
+  case $ac_val in
+    [\\/$]* | ?:[\\/]* | NONE | '' ) ;;
+    *)  { { echo "$as_me:$LINENO: error: expected an absolute path for --$ac_var: $ac_val" >&5
+echo "$as_me: error: expected an absolute path for --$ac_var: $ac_val" >&2;}
+   { (exit 1); exit 1; }; };;
+  esac
+done
+
 
 
 
@@ -13309,10 +13509,10 @@ else
 #line $LINENO "configure"
 #include "confdefs.h"
 
-    #include <langinfo.h>
-    #ifdef CODESET
-    YES_IS_DEFINED
-    #endif
+#include <langinfo.h>
+#ifdef CODESET
+YES_IS_DEFINED
+#endif
 
 _ACEOF
 if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
@@ -13344,11 +13544,15 @@ lib_target=$APR_LIB_TARGET
 
 
 
+APRUTIL_LIBNAME="aprutil${libsuffix}"
+
+
 EXTRA_OS_LINK=""
 host_alias=`uname -s`
 case "$host_alias" in
 *BeOS*)
-                            EXTRA_OS_LINK="$APR_BUILD_DIR/libapr.la $top_builddir/xml/expat/lib/libexpat.la"
+                            aprlib=`$APR_BUILD_DIR/apr-config --link-libtool`
+    EXTRA_OS_LINK="$aprlib $top_builddir/xml/expat/lib/libexpat.la"
     ;;
 *AIX*)
         EXTRA_OS_LINK='$(APRUTIL_LIBS)'
@@ -13993,6 +14197,8 @@ s,@target_os@,$target_os,;t t
 s,@top_builddir@,$top_builddir,;t t
 s,@abs_srcdir@,$abs_srcdir,;t t
 s,@abs_builddir@,$abs_builddir,;t t
+s,@APRUTIL_DOTTED_VERSION@,$APRUTIL_DOTTED_VERSION,;t t
+s,@APRUTIL_MAJOR_VERSION@,$APRUTIL_MAJOR_VERSION,;t t
 s,@APR_INCLUDES@,$APR_INCLUDES,;t t
 s,@APR_LIBS@,$APR_LIBS,;t t
 s,@APR_BUILD_DIR@,$APR_BUILD_DIR,;t t
@@ -14027,6 +14233,7 @@ s,@APR_XML_EXPAT_OLD@,$APR_XML_EXPAT_OLD,;t t
 s,@have_iconv@,$have_iconv,;t t
 s,@so_ext@,$so_ext,;t t
 s,@lib_target@,$lib_target,;t t
+s,@APRUTIL_LIBNAME@,$APRUTIL_LIBNAME,;t t
 s,@EXTRA_OS_LINK@,$EXTRA_OS_LINK,;t t
 s,@APRUTIL_EXPORT_LIBS@,$APRUTIL_EXPORT_LIBS,;t t
 s,@APRUTIL_PRIV_INCLUDES@,$APRUTIL_PRIV_INCLUDES,;t t

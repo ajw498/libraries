@@ -73,9 +73,14 @@
  */
 
 #if   defined(DB_VERSION_MAJOR) && (DB_VERSION_MAJOR == 4)
-/* At this time, there are no differences from our perspective between
- * DB3 and DB4. */
+/* We will treat anything greater than 4.1 as DB4.
+ * We can treat 4.0 as DB3.
+ */
+#if   defined(DB_VERSION_MINOR) && (DB_VERSION_MINOR >= 1)
+#define DB_VER 4
+#else
 #define DB_VER 3
+#endif
 #elif defined(DB_VERSION_MAJOR) && (DB_VERSION_MAJOR == 3)
 #define DB_VER 3
 #elif defined(DB_VERSION_MAJOR) && (DB_VERSION_MAJOR == 2)
@@ -193,9 +198,13 @@ static apr_status_t vt_db_open(apr_dbm_t **pdb, const char *pathname,
     {
         int dberr;
 
-#if DB_VER == 3
+#if DB_VER >= 3
         if ((dberr = db_create(&file.bdb, NULL, 0)) == 0) {
-            if ((dberr = (*file.bdb->open)(file.bdb, pathname, NULL, 
+            if ((dberr = (*file.bdb->open)(file.bdb,
+#if DB_VER == 4
+                                           NULL,
+#endif
+                                           pathname, NULL, 
                                            DB_HASH, dbmode, 
                                            apr_posix_perms2mode(perm))) != 0) {
                 /* close the DB handler */
@@ -339,11 +348,8 @@ static apr_status_t vt_db_firstkey(apr_dbm_t *dbm, apr_datum_t * pkey)
     dberr = (*f->bdb->seq)(f->bdb, &first, &data, R_FIRST);
 #else
     if ((dberr = (*f->bdb->cursor)(f->bdb, NULL, &f->curs
-#if DB_VER == 3
-                                , 0
-#elif (DB_VERSION_MAJOR == 2) && (DB_VERSION_MINOR > 5) 
-                                , 0
-
+#if DB_VER >= 3 || ((DB_VERSION_MAJOR == 2) && (DB_VERSION_MINOR > 5))
+                                   , 0
 #endif
              )) == 0) {
         dberr = (*f->curs->c_get)(f->curs, &first, &data, DB_FIRST);

@@ -452,84 +452,153 @@ APU_DECLARE(apr_status_t) apr_brigade_write(apr_bucket_brigade *b,
     return APR_SUCCESS;
 }
 
-APU_DECLARE(apr_status_t) apr_brigade_puts(apr_bucket_brigade *bb,
-                                           apr_brigade_flush flush, void *ctx,
-                                           const char *str)
+APU_DECLARE(apr_status_t) apr_brigade_writev(apr_bucket_brigade *b,
+                                             apr_brigade_flush flush,
+                                             void *ctx,
+                                             const struct iovec *vec,
+                                             apr_size_t nvec)
 {
-    apr_bucket *bkt = APR_BRIGADE_LAST(bb);
-    if (!APR_BRIGADE_EMPTY(bb) && APR_BUCKET_IS_HEAP(bkt)) {
-        /* If there is some space available in a heap bucket
-         * at the end of the brigade, start copying the string
-         */
-        apr_bucket_heap *h = bkt->data;
-        char *buf = h->base + bkt->start + bkt->length;
-        apr_size_t bytes_avail = h->alloc_len - bkt->length;
-        const char *saved_start = str;
+    apr_bucket *e;
+    apr_size_t total_len;
+    apr_size_t i;
+    char *buf;
 
-        /* Optimization:
-         * The loop that follows is an unrolled version of the original:
-         *   while (bytes_avail && *str) {
-         *       *buf++ = *str++;
-         *       bytes_avail--;
-         *   }
-         * With that original loop, apr_brigade_puts() was showing
-         * up as a surprisingly expensive function in httpd performance
-         * profiling (it gets called a *lot*).  This new loop reduces
-         * the overhead from two conditional branch ops per character
-         * to 1+1/8.  The result is a 30% reduction in the cost of
-         * apr_brigade_puts() in typical usage within the httpd.
-         */
-        while (bytes_avail >= 8) {
-            /* Copy the next 8 characters (or fewer if we hit end of string) */
-            if (!*str) {
-                break;
+    /* Compute the total length of the data to be written.
+     */
+    total_len = 0;
+    for (i = 0; i < nvec; i++) {
+       total_len += vec[i].iov_len;
+    }
+
+    /* If the data to be written is very large, try to convert
+     * the iovec to transient buckets rather than copying.
+     */
+    if (total_len > APR_BUCKET_BUFF_SIZE) {
+        if (flush) {
+            for (i = 0; i < nvec; i++) {
+                e = apr_bucket_transient_create(vec[i].iov_base,
+                                                vec[i].iov_len,
+                                                b->bucket_alloc);
+                APR_BRIGADE_INSERT_TAIL(b, e);
             }
-            *buf++ = *str++;
-            if (!*str) {
-                break;
-            }
-            *buf++ = *str++;
-            if (!*str) {
-                break;
-            }
-            *buf++ = *str++;
-            if (!*str) {
-                break;
-            }
-            *buf++ = *str++;
-            if (!*str) {
-                break;
-            }
-            *buf++ = *str++;
-            if (!*str) {
-                break;
-            }
-            *buf++ = *str++;
-            if (!*str) {
-                break;
-            }
-            *buf++ = *str++;
-            if (!*str) {
-                break;
-            }
-            *buf++ = *str++;
-            bytes_avail -= 8;
+            return flush(b, ctx);
         }
-        bkt->length += (str - saved_start);
-
-        /* If we had enough free space in the bucket to copy
-         * the entire string, we're done
-         */
-        if (!*str) {
+        else {
+            for (i = 0; i < nvec; i++) {
+                e = apr_bucket_heap_create((const char *) vec[i].iov_base,
+                                           vec[i].iov_len, NULL,
+                                           b->bucket_alloc);
+                APR_BRIGADE_INSERT_TAIL(b, e);
+            }
             return APR_SUCCESS;
         }
     }
 
-    /* If the string has not been copied completely to the brigade,
-     * delegate the remaining work to apr_brigade_write(), which
+    i = 0;
+
+    /* If there is a heap bucket at the end of the brigade
+     * already, copy into the existing bucket.
+     */
+    e = APR_BRIGADE_LAST(b);
+    if (!APR_BRIGADE_EMPTY(b) && APR_BUCKET_IS_HEAP(e)) {
+        apr_bucket_heap *h = e->data;
+        apr_size_t remaining = h->alloc_len -
+            (e->length + (apr_size_t)e->start);
+        buf = h->base + e->start + e->length;
+
+        if (remaining >= total_len) {
+            /* Simple case: all the data will fit in the
+             * existing heap bucket
+             */
+            for (; i < nvec; i++) {
+                apr_size_t len = vec[i].iov_len;
+                memcpy(buf, (const void *) vec[i].iov_base, len);
+                buf += len;
+            }
+            e->length += total_len;
+            return APR_SUCCESS;
+        }
+        else {
+            /* More complicated case: not all of the data
+             * will fit in the existing heap bucket.  The
+             * total data size is <= APR_BUCKET_BUFF_SIZE,
+             * so we'll need only one additional bucket.
+             */
+            const char *start_buf = buf;
+            for (; i < nvec; i++) {
+                apr_size_t len = vec[i].iov_len;
+                if (len > remaining) {
+                    break;
+                }
+                memcpy(buf, (const void *) vec[i].iov_base, len);
+                buf += len;
+                remaining -= len;
+            }
+            e->length += (buf - start_buf);
+            total_len -= (buf - start_buf);
+
+            if (flush) {
+                apr_status_t rv = flush(b, ctx);
+                if (rv != APR_SUCCESS) {
+                    return rv;
+                }
+            }
+
+            /* Now fall through into the case below to
+             * allocate another heap bucket and copy the
+             * rest of the array.  (Note that i is not
+             * reset to zero here; it holds the index
+             * of the first vector element to be
+             * written to the new bucket.)
+             */
+        }
+    }
+
+    /* Allocate a new heap bucket, and copy the data into it.
+     * The checks above ensure that the amount of data to be
+     * written here is no larger than APR_BUCKET_BUFF_SIZE.
+     */
+    buf = apr_bucket_alloc(APR_BUCKET_BUFF_SIZE, b->bucket_alloc);
+    e = apr_bucket_heap_create(buf, APR_BUCKET_BUFF_SIZE,
+                               apr_bucket_free, b->bucket_alloc);
+    for (; i < nvec; i++) {
+        apr_size_t len = vec[i].iov_len;
+        memcpy(buf, (const void *) vec[i].iov_base, len);
+        buf += len;
+    }
+    e->length = total_len;
+    APR_BRIGADE_INSERT_TAIL(b, e);
+
+    return APR_SUCCESS;
+}
+
+APU_DECLARE(apr_status_t) apr_brigade_puts(apr_bucket_brigade *bb,
+                                           apr_brigade_flush flush, void *ctx,
+                                           const char *str)
+{
+    apr_size_t len = strlen(str);
+    apr_bucket *bkt = APR_BRIGADE_LAST(bb);
+    if (!APR_BRIGADE_EMPTY(bb) && APR_BUCKET_IS_HEAP(bkt)) {
+        /* If there is enough space available in a heap bucket
+         * at the end of the brigade, copy the string directly
+         * into the heap bucket
+         */
+        apr_bucket_heap *h = bkt->data;
+        apr_size_t bytes_avail = h->alloc_len - bkt->length;
+
+        if (bytes_avail >= len) {
+            char *buf = h->base + bkt->start + bkt->length;
+            memcpy(buf, str, len);
+            bkt->length += len;
+            return APR_SUCCESS;
+        }
+    }
+
+    /* If the string could not be copied into an existing heap
+     * bucket, delegate the work to apr_brigade_write(), which
      * knows how to grow the brigade
      */
-    return apr_brigade_write(bb, flush, ctx, str, strlen(str));
+    return apr_brigade_write(bb, flush, ctx, str, len);
 }
 
 APU_DECLARE_NONSTD(apr_status_t) apr_brigade_putstrs(apr_bucket_brigade *b, 

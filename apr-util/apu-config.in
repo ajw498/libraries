@@ -55,6 +55,9 @@
 # APR-util script designed to allow easy command line access to APR-util
 # configuration parameters.
 
+APRUTIL_MAJOR_VERSION="@APRUTIL_MAJOR_VERSION@"
+APRUTIL_DOTTED_VERSION="@APRUTIL_DOTTED_VERSION@"
+
 prefix="@prefix@"
 exec_prefix="@exec_prefix@"
 bindir="@bindir@"
@@ -64,6 +67,8 @@ includedir="@includedir@"
 LIBS="@APRUTIL_EXPORT_LIBS@"
 INCLUDES="@APRUTIL_INCLUDES@"
 LDFLAGS="@APRUTIL_LDFLAGS@"
+
+APRUTIL_LIBNAME="@APRUTIL_LIBNAME@"
 
 APU_SOURCE_DIR="@top_srcdir@"
 APU_BUILD_DIR="@top_builddir@"
@@ -76,6 +81,7 @@ Usage: apu-config [OPTION]
 
 Known values for OPTION are:
   --prefix[=DIR]    change prefix to DIR
+  --bindir          print location where binaries are installed
   --includes        print include information
   --ldflags         print linker flags
   --libs            print library information
@@ -104,22 +110,26 @@ fi
 thisdir="`dirname $0`"
 thisdir="`cd $thisdir && pwd`"
 if test -d $bindir; then
-  tmpbindir="`cd $bindir && pwd`"
+    tmpbindir="`cd $bindir && pwd`"
 else
-  tmpbindir=""
+    tmpbindir=""
 fi
 if test "$tmpbindir" = "$thisdir"; then
-  location=installed
+    location=installed
 elif test "$APU_SOURCE_DIR" = "$thisdir"; then
-  location=source
+    location=source
 else
-  location=build
+    location=build
 fi
 
 if test "$location" = "installed"; then
-    LA_FILE="$libdir/libaprutil.la"
+    LA_FILE="$libdir/lib${APRUTIL_LIBNAME}.la"
+
+    LIBS=`echo "$LIBS" | sed -e "s $APU_BUILD_DIR/xml/expat $prefix g" -e "s $prefix/lib/libexpat.la -lexpat g"`
+    LDFLAGS=`echo "$LDFLAGS" | sed -e "s $APU_BUILD_DIR/xml/expat $prefix g"`
+    INCLUDES=`echo "$INCLUDES" | sed -e "s $APU_BUILD_DIR/xml/expat $prefix g" -e "s -I$prefix/lib  g"`
 else
-    LA_FILE="$thisdir/libaprutil.la"
+    LA_FILE="$thisdir/lib${APRUTIL_LIBNAME}.la"
 fi
 
 flags=""
@@ -140,12 +150,11 @@ while test $# -gt 0; do
     echo $prefix
     exit 0
     ;;
+    --bindir)
+    echo $bindir
+    exit 0
+    ;;
     --libs)
-    if test "$location" = "installed" && test -f $PREFIX/lib/libexpat.la; then
-      TMP_BUILDDIR=`echo "$APU_BUILD_DIR/xml/expat" | sed 's/\\//\\\\\\//g'`
-      TMP_PREFIX=`echo $prefix | sed 's/\\//\\\\\\//g'`
-      LIBS=`echo "$LIBS" | sed "s/$TMP_BUILDDIR/$TMP_PREFIX/g"`
-    fi
     flags="$flags $LIBS"
     ;;
     --includes)
@@ -167,9 +176,9 @@ while test $# -gt 0; do
     --link-ld)
     if test "$location" = "installed"; then
         ### avoid using -L if libdir is a "standard" location like /usr/lib
-        flags="$flags -L$libdir -laprutil"
+        flags="$flags -L$libdir -l$APRUTIL_LIBNAME"
     else
-        flags="$flags -L$thisdir -laprutil"
+        flags="$flags -L$thisdir -l$APRUTIL_LIBNAME"
     fi
     ;;
     --link-libtool)
@@ -181,7 +190,7 @@ while test $# -gt 0; do
         flags="$flags $LA_FILE"
     elif test "$location" = "installed"; then
         ### avoid using -L if libdir is a "standard" location like /usr/lib
-        flags="$flags -L$libdir -laprutil"
+        flags="$flags -L$libdir -l$APRUTIL_LIBNAME"
     else
         flags="$flags $LA_FILE"
     fi
