@@ -12,5 +12,6 @@ fi
 (cd $ICONV; \
 ./configure --host=arm-riscos-aof --prefix=$PREFIX \
 --enable-extra-encodings \
+&& touch srclib/Makefile.in \
 && make clean && make && make install) || exit 1
 
