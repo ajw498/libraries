@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2000-2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2000-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -127,8 +127,13 @@ APR_DECLARE(apr_status_t) apr_file_read(apr_file_t *thefile, void *buf, apr_size
         if (rc == ERROR_NO_DATA && thefile->timeout != 0) {
             int rcwait = DosWaitEventSem(thefile->pipeSem, thefile->timeout >= 0 ? thefile->timeout / 1000 : SEM_INDEFINITE_WAIT);
 
-            if (rcwait == 0)
+            if (rcwait == 0) {
                 rc = DosRead(thefile->filedes, buf, *nbytes, &bytesread);
+            }
+            else if (rcwait == ERROR_TIMEOUT) {
+                *nbytes = 0;
+                return APR_TIMEUP;
+            }
         }
 
         if (rc) {

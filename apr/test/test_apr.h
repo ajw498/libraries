@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2000-2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2000-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -91,5 +91,13 @@ CuSuite *testlock(void);
 CuSuite *testsockopt(void);
 CuSuite *testpipe(void);
 CuSuite *testthread(void);
+CuSuite *testgetopt(void);
+CuSuite *testnames(void);
+CuSuite *testuser(void);
+
+/* Assert that RV is an APR_SUCCESS value; else fail giving strerror
+ * for RV and CONTEXT message. */
+void apr_assert_success(CuTest* tc, const char *context, apr_status_t rv);
+
 
 #endif /* APR_TEST_INCLUDES */

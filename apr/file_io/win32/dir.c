@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2000-2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2000-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -86,6 +86,8 @@ static apr_status_t dir_cleanup(void *thedir)
 APR_DECLARE(apr_status_t) apr_dir_open(apr_dir_t **new, const char *dirname,
                                        apr_pool_t *pool)
 {
+    apr_status_t rv;
+
     int len = strlen(dirname);
     (*new) = apr_pcalloc(pool, sizeof(apr_dir_t));
     /* Leave room here to add and pop the '*' wildcard for FindFirstFile 
@@ -129,7 +131,14 @@ APR_DECLARE(apr_status_t) apr_dir_open(apr_dir_t **new, const char *dirname,
     (*new)->dirhand = INVALID_HANDLE_VALUE;
     apr_pool_cleanup_register((*new)->pool, (void *)(*new), dir_cleanup,
                         apr_pool_cleanup_null);
-    return APR_SUCCESS;
+
+    rv = apr_dir_read(NULL, 0, *new);
+    if (rv != APR_SUCCESS) {
+        dir_cleanup(*new);
+        *new = NULL;
+    }
+
+    return rv;
 }
 
 APR_DECLARE(apr_status_t) apr_dir_close(apr_dir_t *dir)
@@ -151,6 +160,9 @@ APR_DECLARE(apr_status_t) apr_dir_read(apr_finfo_t *finfo, apr_int32_t wanted,
     apr_wchar_t *eos = NULL;
     IF_WIN_OS_IS_UNICODE
     {
+        /* This code path is always be invoked by apr_dir_open or
+         * apr_dir_rewind, so return without filling out the finfo.
+         */
         if (thedir->dirhand == INVALID_HANDLE_VALUE) 
         {
             apr_status_t rv;
@@ -167,10 +179,20 @@ APR_DECLARE(apr_status_t) apr_dir_read(apr_finfo_t *finfo, apr_int32_t wanted,
             if (thedir->dirhand == INVALID_HANDLE_VALUE) {
                 return apr_get_os_error();
             }
+            thedir->bof = 1;
+            return APR_SUCCESS;
+        }
+        else if (thedir->bof) {
+            /* Noop - we already called FindFirstFileW from
+             * either apr_dir_open or apr_dir_rewind ... use
+             * that first record.
+             */
+            thedir->bof = 0; 
         }
         else if (!FindNextFileW(thedir->dirhand, thedir->w.entry)) {
             return apr_get_os_error();
         }
+
         while (thedir->rootlen &&
                thedir->rootlen + wcslen(thedir->w.entry->cFileName) >= APR_PATH_MAX)
         {
@@ -187,9 +209,12 @@ APR_DECLARE(apr_status_t) apr_dir_read(apr_finfo_t *finfo, apr_int32_t wanted,
 #if APR_HAS_ANSI_FS
     ELSE_WIN_OS_IS_ANSI
     {
-        char *eop = strchr(thedir->dirname, '\0');
+        /* This code path is always be invoked by apr_dir_open or 
+         * apr_dir_rewind, so return without filling out the finfo.
+         */
         if (thedir->dirhand == INVALID_HANDLE_VALUE) {
             /* '/' terminated, so add the '*' and pop it when we finish */
+            char *eop = strchr(thedir->dirname, '\0');
             eop[0] = '*';
             eop[1] = '\0';
             thedir->dirhand = FindFirstFileA(thedir->dirname, 
@@ -198,6 +223,15 @@ APR_DECLARE(apr_status_t) apr_dir_read(apr_finfo_t *finfo, apr_int32_t wanted,
             if (thedir->dirhand == INVALID_HANDLE_VALUE) {
                 return apr_get_os_error();
             }
+            thedir->bof = 1;
+            return APR_SUCCESS;
+        }
+        else if (thedir->bof) {
+            /* Noop - we already called FindFirstFileW from
+             * either apr_dir_open or apr_dir_rewind ... use
+             * that first record.
+             */
+            thedir->bof = 0; 
         }
         else if (!FindNextFile(thedir->dirhand, thedir->n.entry)) {
             return apr_get_os_error();
@@ -263,10 +297,17 @@ APR_DECLARE(apr_status_t) apr_dir_read(apr_finfo_t *finfo, apr_int32_t wanted,
 
 APR_DECLARE(apr_status_t) apr_dir_rewind(apr_dir_t *dir)
 {
+    apr_status_t rv;
+
     /* this will mark the handle as invalid and we'll open it
      * again if apr_dir_read() is subsequently called
      */
-    return dir_cleanup(dir);
+    rv = dir_cleanup(dir);
+
+    if (rv == APR_SUCCESS)
+        rv = apr_dir_read(NULL, 0, dir);
+
+    return rv;
 }
 
 APR_DECLARE(apr_status_t) apr_dir_make(const char *path, apr_fileperms_t perm,
@@ -294,6 +335,58 @@ APR_DECLARE(apr_status_t) apr_dir_make(const char *path, apr_fileperms_t perm,
 #endif
     return APR_SUCCESS;
 }
+
+
+static apr_status_t dir_make_parent(char *path,
+                                    apr_fileperms_t perm,
+                                    apr_pool_t *pool)
+{
+    apr_status_t rv;
+    char *ch = strrchr(path, '\\');
+    if (!ch) {
+        return APR_ENOENT;
+    }
+
+    *ch = '\0';
+    rv = apr_dir_make (path, perm, pool); /* Try to make straight off */
+    
+    if (APR_STATUS_IS_ENOENT(rv)) { /* Missing an intermediate dir */
+        rv = dir_make_parent(path, perm, pool);
+
+        if (rv == APR_SUCCESS) {
+            rv = apr_dir_make (path, perm, pool); /* And complete the path */
+        }
+    }
+
+    *ch = '\\'; /* Always replace the slash before returning */
+    return rv;
+}
+
+APR_DECLARE(apr_status_t) apr_dir_make_recursive(const char *path,
+                                                 apr_fileperms_t perm,
+                                                 apr_pool_t *pool)
+{
+    apr_status_t rv = 0;
+    
+    rv = apr_dir_make (path, perm, pool); /* Try to make PATH right out */
+    
+    if (APR_STATUS_IS_EEXIST(rv)) /* It's OK if PATH exists */
+        return APR_SUCCESS;
+    
+    if (APR_STATUS_IS_ENOENT(rv)) { /* Missing an intermediate dir */
+        char *dir;
+        
+        rv = apr_filepath_merge(&dir, "", path, APR_FILEPATH_NATIVE, pool);
+
+        if (rv == APR_SUCCESS)
+            rv = dir_make_parent(dir, perm, pool); /* Make intermediate dirs */
+        
+        if (rv == APR_SUCCESS)
+            rv = apr_dir_make (dir, perm, pool);   /* And complete the path */
+    }
+    return rv;
+}
+
 
 APR_DECLARE(apr_status_t) apr_dir_remove(const char *path, apr_pool_t *pool)
 {

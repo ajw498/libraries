@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2000-2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2000-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -388,8 +388,8 @@ struct apr_table_t {
 };
 
 /*
- * XXX: if you tweak this you should look at is_empty_table() and table_elts()
- * in alloc.h
+ * NOTICE: if you tweak this you should look at is_empty_table() 
+ * and table_elts() in alloc.h
  */
 #ifdef MAKE_TABLE_PROFILE
 static apr_table_entry_t *table_push(apr_table_t *t)

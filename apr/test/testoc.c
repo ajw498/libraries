@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2000-2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2000-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -61,6 +61,15 @@
 
 #if APR_HAS_OTHER_CHILD
 
+/* XXX I'm sure there has to be a better way to do this ... */
+#ifdef WIN32
+#define EXTENSION ".exe"
+#elif NETWARE
+#define EXTENSION ".nlm"
+#else
+#define EXTENSION
+#endif
+
 static char reasonstr[256];
 
 static void ocmaint(int reason, void *data, int status)
@@ -84,7 +93,6 @@ static void ocmaint(int reason, void *data, int status)
         break;
     }
 }
-#endif
 
 #ifndef SIGKILL
 #define SIGKILL 1
@@ -101,7 +109,7 @@ static void test_child_kill(CuTest *tc)
     const char *args[3];
     apr_status_t rv;
 
-    args[0] = apr_pstrdup(p, "occhild");
+    args[0] = apr_pstrdup(p, "occhild" EXTENSION);
     args[1] = apr_pstrdup(p, "-X");
     args[2] = NULL;
 
@@ -112,7 +120,7 @@ static void test_child_kill(CuTest *tc)
                              APR_NO_PIPE);
     CuAssertIntEquals(tc, APR_SUCCESS, rv);
 
-    rv = apr_proc_create(&newproc, "./occhild", args, NULL, procattr, p);
+    rv = apr_proc_create(&newproc, "./occhild" EXTENSION, args, NULL, procattr, p);
     CuAssertIntEquals(tc, APR_SUCCESS, rv);
     CuAssertPtrNotNull(tc, newproc.in);
     CuAssertPtrEquals(tc, NULL, newproc.out);
@@ -132,8 +140,8 @@ static void test_child_kill(CuTest *tc)
     apr_proc_other_child_check();
     CuAssertStrEquals(tc, "APR_OC_REASON_DEATH", reasonstr);
 }    
+#else
 
-#if !APR_HAS_OTHER_CHILD
 static void oc_not_impl(CuTest *tc)
 {
     CuNotImpl(tc, "Other child logic not implemented on this platform");

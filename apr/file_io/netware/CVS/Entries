@@ -1,6 +1,6 @@
-/filepath.c/1.1/Thu Oct  4 00:01:09 2001//
-/filestat.c/1.19/Wed Nov  6 17:08:52 2002//
-/filesys.c/1.4/Wed Mar 13 20:39:10 2002//
-/flock.c/1.4/Mon Aug  5 21:11:12 2002//
-/pipe.c/1.13/Wed Oct  9 15:40:28 2002//
+/filepath.c/1.1/Sat Jan  4 20:27:45 2003//
+/filestat.c/1.21/Sat Jan  4 20:39:30 2003//
+/filesys.c/1.6/Sat Jan  4 20:39:30 2003//
+/flock.c/1.5/Sat Jan  4 20:39:30 2003//
+/pipe.c/1.14/Sat Jan  4 20:39:30 2003//
 D

@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2000-2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2000-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -68,7 +68,7 @@
  *           2002-08-14 12:05:36.186711 -25200 [257 Sat].
  * Which happens to be when I wrote the new tests.
  */
-static apr_time_t now = 1032030336186711;
+static apr_time_t now = APR_INT64_C(1032030336186711);
 
 static char* print_time (apr_pool_t *pool, const apr_time_exp_t *xt)
 {
@@ -129,6 +129,10 @@ static void test_localstr(CuTest *tc)
     if (rv == APR_ENOTIMPL) {
         CuNotImpl(tc, "apr_time_exp_lt");
     }
+    /* Force us into PST timezone.  This is the only way the test will
+     * succeed.
+     */
+    xt.tm_gmtoff = -25200;
     CuAssertTrue(tc, rv == APR_SUCCESS);
     CuAssertStrEquals(tc, "2002-08-14 12:05:36.186711 -25200 [257 Sat] DST",
                       print_time(p, &xt));

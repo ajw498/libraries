@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2000-2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2000-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -190,7 +190,7 @@ APR_DECLARE(void) apr_hash_this(apr_hash_index_t *hi, const void **key,
  * @param ht The hash table
  * @return The number of key/value pairs in the hash table.
  */
-APR_DECLARE(int) apr_hash_count(apr_hash_t *ht);
+APR_DECLARE(apr_uint32_t) apr_hash_count(apr_hash_t *ht);
 
 /**
  * Merge two hash tables into one new hash table. The values of the overlay

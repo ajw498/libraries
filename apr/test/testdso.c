@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2000-2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2000-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -60,27 +60,29 @@
 #include "apr_dso.h"
 #include "apr_strings.h"
 #include "apr.h"
-#ifdef APR_HAVE_UNISTD_H
+#if APR_HAVE_UNISTD_H
 #include <unistd.h>
 #endif
 
 #ifdef NETWARE
-# define LIB_NAME "mod_test.nlm"
-#elif defined(BEOS)
-# define LIB_NAME "mod_test.so"
+# define MOD_NAME "mod_test.nlm"
+#elif defined(BEOS) || defined(WIN32)
+# define MOD_NAME "mod_test.so"
 #elif defined(DARWIN)
-# define LIB_NAME ".libs/mod_test.so" 
-# define LIB_NAME2 ".libs/libmod_test.dylib" 
+# define MOD_NAME ".libs/mod_test.so" 
+# define LIB_NAME ".libs/libmod_test.dylib" 
 #elif defined(__hpux__)
-# define LIB_NAME ".libs/mod_test.sl"
-# define LIB_NAME2 ".libs/libmod_test.sl"
+# define MOD_NAME ".libs/mod_test.sl"
+# define LIB_NAME ".libs/libmod_test.sl"
+#elif defined(_AIX)
+# define MOD_NAME ".libs/libmod_test.so"
+# define LIB_NAME ".libs/libmod_test.so"
 #else /* Every other Unix */
-# define LIB_NAME ".libs/mod_test.so"
-# define LIB_NAME2 ".libs/libmod_test.so"
+# define MOD_NAME ".libs/mod_test.so"
+# define LIB_NAME ".libs/libmod_test.so"
 #endif
 
-static char *filename;
-static char *filename2;
+static char *modname;
 
 static void test_load_module(CuTest *tc)
 {
@@ -88,7 +90,7 @@ static void test_load_module(CuTest *tc)
     apr_status_t status;
     char errstr[256];
 
-    status = apr_dso_load(&h, filename, p);
+    status = apr_dso_load(&h, modname, p);
     CuAssert(tc, apr_dso_error(h, errstr, 256), APR_SUCCESS == status);
     CuAssertPtrNotNull(tc, h);
 
@@ -104,7 +106,7 @@ static void test_dso_sym(CuTest *tc)
     char teststr[256];
     char errstr[256];
 
-    status = apr_dso_load(&h, filename, p);
+    status = apr_dso_load(&h, modname, p);
     CuAssert(tc, apr_dso_error(h, errstr, 256), APR_SUCCESS == status);
     CuAssertPtrNotNull(tc, h);
 
@@ -127,7 +129,7 @@ static void test_dso_sym_return_value(CuTest *tc)
     int (*function)(int);
     char errstr[256];
 
-    status = apr_dso_load(&h, filename, p);
+    status = apr_dso_load(&h, modname, p);
     CuAssert(tc, apr_dso_error(h, errstr, 256), APR_SUCCESS == status);
     CuAssertPtrNotNull(tc, h);
 
@@ -149,7 +151,7 @@ static void test_unload_module(CuTest *tc)
     char errstr[256];
     apr_dso_handle_sym_t func1 = NULL;
 
-    status = apr_dso_load(&h, filename, p);
+    status = apr_dso_load(&h, modname, p);
     CuAssert(tc, apr_dso_error(h, errstr, 256), APR_SUCCESS == status);
     CuAssertPtrNotNull(tc, h);
 
@@ -157,32 +159,28 @@ static void test_unload_module(CuTest *tc)
     CuAssert(tc, apr_dso_error(h, errstr, 256), APR_SUCCESS == status);
 
     status = apr_dso_sym(&func1, h, "print_hello");
-    CuAssertIntEquals(tc, APR_EINIT, status);
+    CuAssertIntEquals(tc, 1, APR_STATUS_IS_ESYMNOTFOUND(status));
 }
 
 
-static void test_load_non_module(CuTest *tc)
+#ifdef LIB_NAME
+static char *libname;
+
+static void test_load_library(CuTest *tc)
 {
-#ifndef LIB_NAME2
-    CuNotImpl(tc, "Can't load non-module library");
-#else
     apr_dso_handle_t *h = NULL;
     apr_status_t status;
     char errstr[256];
 
-    status = apr_dso_load(&h, filename2, p);
+    status = apr_dso_load(&h, libname, p);
     CuAssert(tc, apr_dso_error(h, errstr, 256), APR_SUCCESS == status);
     CuAssertPtrNotNull(tc, h);
 
     apr_dso_unload(h);
-#endif
 }
 
-static void test_dso_sym_non_module(CuTest *tc)
+static void test_dso_sym_library(CuTest *tc)
 {
-#ifndef LIB_NAME2
-    CuNotImpl(tc, "Can't load non-module library");
-#else
     apr_dso_handle_t *h = NULL;
     apr_dso_handle_sym_t func1 = NULL;
     apr_status_t status;
@@ -190,7 +188,7 @@ static void test_dso_sym_non_module(CuTest *tc)
     char teststr[256];
     char errstr[256];
 
-    status = apr_dso_load(&h, filename2, p);
+    status = apr_dso_load(&h, libname, p);
     CuAssert(tc, apr_dso_error(h, errstr, 256), APR_SUCCESS == status);
     CuAssertPtrNotNull(tc, h);
 
@@ -203,21 +201,17 @@ static void test_dso_sym_non_module(CuTest *tc)
     CuAssertStrEquals(tc, "Hello - I'm a DSO!\n", teststr);
 
     apr_dso_unload(h);
-#endif
 }
 
-static void test_dso_sym_return_value_non_mod(CuTest *tc)
+static void test_dso_sym_return_value_library(CuTest *tc)
 {
-#ifndef LIB_NAME2
-    CuNotImpl(tc, "Can't load non-module library");
-#else
     apr_dso_handle_t *h = NULL;
     apr_dso_handle_sym_t func1 = NULL;
     apr_status_t status;
     int (*function)(int);
     char errstr[256];
 
-    status = apr_dso_load(&h, filename2, p);
+    status = apr_dso_load(&h, libname, p);
     CuAssert(tc, apr_dso_error(h, errstr, 256), APR_SUCCESS == status);
     CuAssertPtrNotNull(tc, h);
 
@@ -230,20 +224,16 @@ static void test_dso_sym_return_value_non_mod(CuTest *tc)
     CuAssertIntEquals(tc, 5, status);
 
     apr_dso_unload(h);
-#endif
 }
 
-static void test_unload_non_module(CuTest *tc)
+static void test_unload_library(CuTest *tc)
 {
-#ifndef LIB_NAME2
-    CuNotImpl(tc, "Can't load non-module library");
-#else
     apr_dso_handle_t *h = NULL;
     apr_status_t status;
     char errstr[256];
     apr_dso_handle_sym_t func1 = NULL;
 
-    status = apr_dso_load(&h, filename2, p);
+    status = apr_dso_load(&h, libname, p);
     CuAssert(tc, apr_dso_error(h, errstr, 256), APR_SUCCESS == status);
     CuAssertPtrNotNull(tc, h);
 
@@ -251,9 +241,10 @@ static void test_unload_non_module(CuTest *tc)
     CuAssert(tc, apr_dso_error(h, errstr, 256), APR_SUCCESS == status);
 
     status = apr_dso_sym(&func1, h, "print_hello");
-    CuAssertIntEquals(tc, APR_EINIT, status);
-#endif
+    CuAssertIntEquals(tc, 1, APR_STATUS_IS_ESYMNOTFOUND(status));
 }
+
+#endif /* def(LIB_NAME) */
 
 static void test_load_notthere(CuTest *tc)
 {
@@ -261,33 +252,34 @@ static void test_load_notthere(CuTest *tc)
     apr_status_t status;
 
     status = apr_dso_load(&h, "No_File.so", p);
-    CuAssertIntEquals(tc, APR_EDSOOPEN, status);
-    CuAssertPtrNotNull(tc, h);
 
-    apr_dso_unload(h);
+    CuAssertIntEquals(tc, 1, APR_STATUS_IS_EDSOOPEN(status));
+    CuAssertPtrNotNull(tc, h);
 }    
 
 CuSuite *testdso(void)
 {
     CuSuite *suite = CuSuiteNew("DSO");
 
-    filename = apr_pcalloc(p, 256);
-    getcwd(filename, 256);
-    filename = apr_pstrcat(p, filename, "/", LIB_NAME, NULL);
-
-    filename2 = apr_pcalloc(p, 256);
-    getcwd(filename2, 256);
-    filename2 = apr_pstrcat(p, filename2, "/", LIB_NAME2, NULL);
+    modname = apr_pcalloc(p, 256);
+    getcwd(modname, 256);
+    modname = apr_pstrcat(p, modname, "/", MOD_NAME, NULL);
 
     SUITE_ADD_TEST(suite, test_load_module);
     SUITE_ADD_TEST(suite, test_dso_sym);
     SUITE_ADD_TEST(suite, test_dso_sym_return_value);
     SUITE_ADD_TEST(suite, test_unload_module);
 
-    SUITE_ADD_TEST(suite, test_load_non_module);
-    SUITE_ADD_TEST(suite, test_dso_sym_non_module);
-    SUITE_ADD_TEST(suite, test_dso_sym_return_value_non_mod);
-    SUITE_ADD_TEST(suite, test_unload_non_module);
+#ifdef LIB_NAME
+    libname = apr_pcalloc(p, 256);
+    getcwd(libname, 256);
+    libname = apr_pstrcat(p, libname, "/", LIB_NAME, NULL);
+
+    SUITE_ADD_TEST(suite, test_load_library);
+    SUITE_ADD_TEST(suite, test_dso_sym_library);
+    SUITE_ADD_TEST(suite, test_dso_sym_return_value_library);
+    SUITE_ADD_TEST(suite, test_unload_library);
+#endif
 
     SUITE_ADD_TEST(suite, test_load_notthere);
 

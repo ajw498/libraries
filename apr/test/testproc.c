@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2000-2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2000-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -62,6 +62,8 @@
 /* XXX I'm sure there has to be a better way to do this ... */
 #ifdef WIN32
 #define EXTENSION ".exe"
+#elif NETWARE
+#define EXTENSION ".nlm"
 #else
 #define EXTENSION
 #endif
@@ -92,7 +94,7 @@ static void test_create_proc(CuTest *tc)
     rv = apr_procattr_cmdtype_set(attr, APR_PROGRAM);
     CuAssertIntEquals(tc, APR_SUCCESS, rv);
 
-    args[0] = "proc_child";
+    args[0] = "proc_child" EXTENSION;
     args[1] = NULL;
     
     rv = apr_proc_create(&newproc, "../proc_child" EXTENSION, args, NULL, 
@@ -187,6 +189,11 @@ static void test_file_redir(CuTest *tc)
     rv = apr_file_read(testout, buf, &length);
     CuAssertIntEquals(tc, APR_SUCCESS, rv);
     CuAssertStrEquals(tc, TESTSTR, buf);
+
+
+    apr_file_close(testfile);
+    apr_file_close(testout);
+    apr_file_close(testerr);
 
     rv = apr_file_remove("data/stdin", p);;
     CuAssertIntEquals(tc, APR_SUCCESS, rv);

@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2000-2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2000-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -60,6 +60,20 @@
 /* Top-level pool which can be used by tests. */
 apr_pool_t *p;
 
+void apr_assert_success(CuTest* tc, const char* context, apr_status_t rv)
+{
+    if (rv == APR_ENOTIMPL) {
+        CuNotImpl(tc, context);
+    }
+
+    if (rv != APR_SUCCESS) {
+        char buf[STRING_MAX], ebuf[128];
+        sprintf(buf, "%s (%d): %s\n", context, rv,
+                apr_strerror(rv, ebuf, sizeof ebuf));
+        CuFail(tc, buf);
+    }
+}
+
 static const struct testlist {
     const char *testname;
     CuSuite *(*func)(void);
@@ -89,6 +103,9 @@ static const struct testlist {
     {"testpoll", testpoll},
     {"testlock", testlock},
     {"testthread", testthread},
+    {"testargs", testgetopt},
+    {"testnames", testnames},
+    {"testuser", testuser},
     {"LastTest", NULL}
 };
 
@@ -120,6 +137,7 @@ int main(int argc, char *argv[])
                 }
 
                 CuSuiteListAdd(alltests, tests[j].func());
+                break;
             }
         }
     }
@@ -134,6 +152,7 @@ int main(int argc, char *argv[])
     CuSuiteListRunWithSummary(alltests);
     i = CuSuiteListDetails(alltests, output);
     printf("%s\n", output->buffer);
+
     return i > 0 ? 1 : 0;
 }
 

@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2000-2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2000-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -52,107 +52,97 @@
  * <http://www.apache.org/>.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-
+#include "test_apr.h"
 #include "apr_errno.h"
 #include "apr_general.h"
 #include "apr_user.h"
 
-#if !APR_HAS_USER
-int main(void)
+#if APR_HAS_USER
+static void uid_current(CuTest *tc)
 {
-    fprintf(stderr,
-            "This program won't work on this platform because !APR_HAS_USER.\n");
-    return 0;
-}
-#else
-int main(int argc, char *argv[])
-{
-    apr_pool_t *p;
+    apr_uid_t uid;
+    apr_gid_t gid;
     apr_status_t rv;
-    char msgbuf[80];
-    char *groupname;
-    char *username;
-    char *homedir;
-    apr_uid_t userid;
-    apr_gid_t groupid, newgroupid;
 
-    if (apr_initialize() != APR_SUCCESS) {
-        fprintf(stderr, "Something went wrong\n");
-        exit(-1);
-    }
-    atexit(apr_terminate);
+    rv = apr_uid_current(&uid, &gid, p);
+    CuAssertIntEquals(tc, APR_SUCCESS, rv);
+}
 
-    if (apr_pool_create(&p, NULL) != APR_SUCCESS) {
-        fprintf(stderr, "Something went wrong\n");
-        exit(-1);
-    }
+static void username(CuTest *tc)
+{
+    apr_uid_t uid;
+    apr_gid_t gid;
+    apr_uid_t retreived_uid;
+    apr_gid_t retreived_gid;
+    apr_status_t rv;
+    char *uname = NULL;
 
-    if (argc != 2) {
-        fprintf(stderr,
-                "optional: %s username\n",
-                argv[0]);
-        if ((rv = apr_uid_current(&userid, &groupid, p)) != APR_SUCCESS) {
-            fprintf(stderr, "apr_uid_current failed: %s\n",
-                    apr_strerror(rv, msgbuf, sizeof(msgbuf)));
-            exit(-1);
+    rv = apr_uid_current(&uid, &gid, p);
+    CuAssertIntEquals(tc, APR_SUCCESS, rv);
+
+    rv = apr_uid_name_get(&uname, uid, p);
+    CuAssertIntEquals(tc, APR_SUCCESS, rv);
+    CuAssertPtrNotNull(tc, uname);
+
+    rv = apr_uid_get(&retreived_uid, &retreived_gid, uname, p);
+    CuAssertIntEquals(tc, APR_SUCCESS, rv);
+
+    CuAssertIntEquals(tc, APR_SUCCESS, apr_uid_compare(uid, retreived_uid));
+    if (!gid || !retreived_gid) {
+        /* The function had no way to recover the gid (this would have been
+         * an ENOTIMPL if apr_uid_ functions didn't try to double-up and
+         * also return apr_gid_t values, which was bogus.
+         */
+        if (!gid) {
+            CuNotImpl(tc, "Groups from apr_uid_current");
         }
-        apr_uid_name_get(&username, userid, p);
-        if (rv != APR_SUCCESS) {
-            fprintf(stderr, "apr_uid_name_get(,,) failed: %s\n",
-                    apr_strerror(rv, msgbuf, sizeof(msgbuf)));
-            exit(-1);
-        }
+        else {
+            CuNotImpl(tc, "Groups from apr_uid_get");
+        }        
     }
     else {
-        username = argv[1];
-
-        rv = apr_uid_get(&userid, &groupid, username, p);
-        if (rv != APR_SUCCESS) {
-            fprintf(stderr, "apr_uid_get(,,%s,) failed: %s\n",
-                    username,
-                    apr_strerror(rv, msgbuf, sizeof(msgbuf)));
-            exit(-1);
-        }
+        CuAssertIntEquals(tc, APR_SUCCESS, apr_gid_compare(gid, retreived_gid));
     }
-
-    rv = apr_gid_name_get(&groupname, groupid, p);
-    if (rv != APR_SUCCESS)
-        groupname = "(none)";
-
-    rv = apr_gid_get(&newgroupid, groupname, p);
-    if (rv != APR_SUCCESS) {
-        fprintf(stderr, "apr_gid_get(,%s,) failed: %s\n",
-                groupname,
-                apr_strerror(rv, msgbuf, sizeof msgbuf));
-        exit(-1);
-    }
-
-    if (groupid != newgroupid) {
-        fprintf(stderr, "oops, we got a different result for the "
-                "group name/id mapping\n");
-        /* whoever hits this problem gets to figure out how to 
-         * portably display groupid and newgroupid :) 
-         */
-        fprintf(stderr, "group: %s\n",
-                groupname);
-    }
-
-    printf("user/group ids for %s: %d/%d\n",
-           username,
-           (int)userid, (int)groupid);
-
-    rv = apr_uid_homepath_get(&homedir, username, p);
-    if (rv != APR_SUCCESS) {
-        fprintf(stderr, "apr_uid_homepath_get(,%s,) failed: %s\n",
-                username,
-                apr_strerror(rv, msgbuf, sizeof(msgbuf)));
-        exit(-1);
-    }
-    printf("home directory for %s (member of %s) is:\n`%s'\n",
-           username, groupname, homedir);
-
-    return 0;
 }
-#endif /* APR_HAS_USER */
+
+static void groupname(CuTest *tc)
+{
+    apr_uid_t uid;
+    apr_gid_t gid;
+    apr_gid_t retreived_gid;
+    apr_status_t rv;
+    char *gname = NULL;
+
+    rv = apr_uid_current(&uid, &gid, p);
+    CuAssertIntEquals(tc, APR_SUCCESS, rv);
+
+    rv = apr_gid_name_get(&gname, gid, p);
+    CuAssertIntEquals(tc, APR_SUCCESS, rv);
+    CuAssertPtrNotNull(tc, gname);
+
+    rv = apr_gid_get(&retreived_gid, gname, p);
+    CuAssertIntEquals(tc, APR_SUCCESS, rv);
+
+    CuAssertIntEquals(tc, APR_SUCCESS, apr_gid_compare(gid, retreived_gid));
+}
+#else
+static void users_not_impl(CuTest *tc)
+{
+    CuNotImpl(tc, "Users not implemented on this platform");
+}
+#endif
+
+CuSuite *testuser(void)
+{
+    CuSuite *suite = CuSuiteNew("Users");
+
+#if !APR_HAS_USER
+    SUITE_ADD_TEST(suite, users_not_impl);
+#else
+    SUITE_ADD_TEST(suite, uid_current);
+    SUITE_ADD_TEST(suite, username);
+    SUITE_ADD_TEST(suite, groupname);
+#endif
+
+    return suite;
+}

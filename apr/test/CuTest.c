@@ -34,7 +34,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "CuTest.h"
 
@@ -42,11 +41,15 @@ static int verbose = 0;
 
 void CuInit(int argc, char *argv[])
 {
-	int c;
+	int i;
 	
-	c = getopt(argc, argv, "v");
-	if (c == 'v') {
-		verbose = 1;
+	/* Windows doesn't have getopt, so we have to fake it.  We can't use
+	 * apr_getopt, because CuTest is meant to be a stand-alone test suite
+	 */
+	for (i = 0; i < argc; i++) {
+		if (!strcmp(argv[i], "-v")) {
+			verbose = 1;
+		}
 	}
 }
 
@@ -179,6 +182,20 @@ void CuAssertTrue(CuTest* tc, int condition)
 	CuFail(tc, "assert failed");
 }
 
+void CuAssertStrNEquals(CuTest* tc, const char* expected, const char* actual,
+                        int n)
+{
+	CuString* message;
+	if (strncmp(expected, actual, n) == 0) return;
+	message = CuStringNew();
+	CuStringAppend(message, "expected\n---->\n");
+	CuStringAppend(message, expected);
+	CuStringAppend(message, "\n<----\nbut saw\n---->\n");
+	CuStringAppend(message, actual);
+	CuStringAppend(message, "\n<----");
+	CuFail(tc, message->buffer);
+}
+
 void CuAssertStrEquals(CuTest* tc, const char* expected, const char* actual)
 {
 	CuString* message;
@@ -188,7 +205,7 @@ void CuAssertStrEquals(CuTest* tc, const char* expected, const char* actual)
 	CuStringAppend(message, expected);
 	CuStringAppend(message, "\n<----\nbut saw\n---->\n");
 	CuStringAppend(message, actual);
-	CuStringAppend(message, "\n<----\n");
+	CuStringAppend(message, "\n<----");
 	CuFail(tc, message->buffer);
 }
 
@@ -306,7 +323,7 @@ void CuSuiteDetails(CuSuite* testSuite, CuString* details)
 
 	if (testSuite->failCount != 0 && verbose)
 	{
-		CuStringAppendFormat(details, "Failed tests:\n");
+		CuStringAppendFormat(details, "\nFailed tests in %s:\n", testSuite->name);
 		for (i = 0 ; i < testSuite->count ; ++i)
 		{
 			CuTest* testCase = testSuite->list[i];
@@ -320,7 +337,7 @@ void CuSuiteDetails(CuSuite* testSuite, CuString* details)
 	}
 	if (testSuite->notimplCount != 0 && verbose)
 	{
-		CuStringAppendFormat(details, "\nNot Implemented tests:\n");
+		CuStringAppendFormat(details, "\nNot Implemented tests in %s:\n", testSuite->name);
 		for (i = 0 ; i < testSuite->count ; ++i)
 		{
 			CuTest* testCase = testSuite->list[i];

@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2000-2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2000-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -83,7 +83,11 @@ static void create_filename(CuTest *tc)
     char *oldfileptr;
 
     apr_filepath_get(&file1, 0, p);
+#ifdef WIN32
+    CuAssertTrue(tc, file1[1] == ':');
+#else
     CuAssertTrue(tc, file1[0] == '/');
+#endif
     CuAssertTrue(tc, file1[strlen(file1) - 1] != '/');
 
     oldfileptr = file1;
@@ -91,6 +95,14 @@ static void create_filename(CuTest *tc)
     CuAssertTrue(tc, oldfileptr != file1);
 }
 
+static void test_file_close(CuTest *tc)
+{
+    apr_status_t rv;
+
+    rv = apr_file_close(thefile);
+    CuAssertIntEquals(tc, rv, APR_SUCCESS);
+}
+   
 static void test_file_open(CuTest *tc)
 {
     apr_status_t rv;
@@ -103,10 +115,11 @@ static void test_file_open(CuTest *tc)
 static void test_get_filesize(CuTest *tc)
 {
     apr_status_t rv;
+    int fsize = strlen("This is the MMAP data file."APR_EOL_STR);
 
     rv = apr_file_info_get(&finfo, APR_FINFO_NORM, thefile);
     CuAssertIntEquals(tc, rv, APR_SUCCESS);
-    CuAssertIntEquals(tc, finfo.size, 28);
+    CuAssertIntEquals(tc, fsize, finfo.size);
 }
 
 static void test_mmap_create(CuTest *tc)
@@ -120,10 +133,12 @@ static void test_mmap_create(CuTest *tc)
 
 static void test_mmap_contents(CuTest *tc)
 {
+    int fsize = strlen("This is the MMAP data file."APR_EOL_STR);
+    
     CuAssertPtrNotNull(tc, themmap);
     CuAssertPtrNotNull(tc, themmap->mm);
-    CuAssertIntEquals(tc, themmap->size, 28);
-    CuAssertStrEquals(tc, themmap->mm, "This is the MMAP data file.\n");
+    CuAssertIntEquals(tc, fsize, themmap->size);
+    CuAssertStrEquals(tc, themmap->mm, "This is the MMAP data file."APR_EOL_STR);
 }
 
 static void test_mmap_delete(CuTest *tc)
@@ -142,7 +157,7 @@ static void test_mmap_offset(CuTest *tc)
 
     CuAssertPtrNotNull(tc, themmap);
     rv = apr_mmap_offset(&addr, themmap, 5);
-    CuAssertStrEquals(tc, addr, "This is the MMAP data file.\n" + 5);
+    CuAssertStrEquals(tc, addr, "This is the MMAP data file."APR_EOL_STR + 5);
 }
 #endif
 
@@ -158,6 +173,7 @@ CuSuite *testmmap(void)
     SUITE_ADD_TEST(suite, test_mmap_contents);
     SUITE_ADD_TEST(suite, test_mmap_offset);
     SUITE_ADD_TEST(suite, test_mmap_delete);
+    SUITE_ADD_TEST(suite, test_file_close);
 #else
     SUITE_ADD_TEST(suite, not_implemented);
 #endif

@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2000-2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2000-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -120,7 +120,7 @@ APR_DECLARE(apr_status_t) apr_file_open(apr_file_t **new, const char *fname, apr
 
     if (flag & APR_TRUNCATE) {
         oflags |= OPEN_ACTION_REPLACE_IF_EXISTS;
-    } else if ((oflags & 0xF) == 0) {
+    } else if ((oflags & 0xFF) == 0) {
         oflags |= OPEN_ACTION_OPEN_IF_EXISTS;
     }
     

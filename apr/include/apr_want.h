@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2000-2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2000-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -55,7 +55,7 @@
 #include "apr.h"        /* configuration data */
 /**
  * @file apr_want.h
- * @brief APR_WANT_XXX documentation
+ * @brief APR_WANT_HEADERS documentation
  *
  * <PRE>
  * Features:

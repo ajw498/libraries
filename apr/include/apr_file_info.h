@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2000-2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2000-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -78,15 +78,32 @@ extern "C" {
  * @{
  */
 
+/* Many applications use the type member to determine the
+ * existance of a file or initialization of the file info,
+ * so the APR_NOFILE value must be distinct from APR_UNKFILE.
+ */
+
+/** apr_filetype_e values for the filetype member of the 
+ * apr_file_info_t structure
+ * @warning: Not all of the filetypes below can be determined.
+ * For example, a given platform might not correctly report 
+ * a socket descriptor as APR_SOCK if that type isn't 
+ * well-identified on that platform.  In such cases where
+ * a filetype exists but cannot be described by the recognized
+ * flags below, the filetype will be APR_UNKFILE.  If the
+ * filetype member is not determined, the type will be APR_NOFILE.
+ */
+
 typedef enum {
-    APR_NOFILE = 0,     /**< the file exists, but APR doesn't know its type */
+    APR_NOFILE = 0,     /**< no file type determined */
     APR_REG,            /**< a regular file */
     APR_DIR,            /**< a directory */
     APR_CHR,            /**< a character device */
     APR_BLK,            /**< a block device */
     APR_PIPE,           /**< a FIFO / pipe */
     APR_LNK,            /**< a symbolic link */
-    APR_SOCK            /**< a [unix domain] socket */
+    APR_SOCK,           /**< a [unix domain] socket */
+    APR_UNKFILE = 127   /**< a file of some other unknown type */
 } apr_filetype_e; 
 
 /**
@@ -187,8 +204,9 @@ struct apr_finfo_t {
     apr_int32_t valid;
     /** The access permissions of the file.  Mimics Unix access rights. */
     apr_fileperms_t protection;
-    /** The type of file.  One of APR_NOFILE, APR_REG, APR_DIR, APR_CHR, 
-     *  APR_BLK, APR_PIPE, APR_LNK, APR_SOCK 
+    /** The type of file.  One of APR_REG, APR_DIR, APR_CHR, APR_BLK, APR_PIPE, 
+     * APR_LNK or APR_SOCK.  If the type is undetermined, the value is APR_NOFILE.
+     * If the type cannot be determined, the value is APR_UNKFILE.
      */
     apr_filetype_e filetype;
     /** The user id that owns the file */
@@ -355,6 +373,11 @@ APR_DECLARE(apr_status_t) apr_filepath_root(const char **rootpath,
  * @param flags the desired APR_FILEPATH_ rules to apply when merging
  * @param p the pool to allocate the new path string from
  * @deffunc apr_status_t apr_filepath_merge(char **newpath, const char *rootpath, const char *addpath, apr_int32_t flags, apr_pool_t *p)
+ * @remark if the flag APR_FILEPATH_TRUENAME is given, and the addpath 
+ * contains wildcard characters ('*', '?') on platforms that don't support 
+ * such characters within filenames, the paths will be merged, but the 
+ * result code will be APR_EPATHWILD, and all further segments will not
+ * reflect the true filenames including the wildcard and following segments.
  */                        
 APR_DECLARE(apr_status_t) apr_filepath_merge(char **newpath, 
                                              const char *rootpath,
@@ -382,6 +405,32 @@ APR_DECLARE(apr_status_t) apr_filepath_get(char **path, apr_int32_t flags,
  * @deffunc apr_status_t apr_filepath_get(char **defpath, apr_pool_t *p)
  */
 APR_DECLARE(apr_status_t) apr_filepath_set(const char *path, apr_pool_t *p);
+
+/**
+ * @defgroup apr_filepath_encoding FilePath Character encoding
+ * @{
+ */
+
+/** The FilePath character encoding is unknown */
+#define APR_FILEPATH_ENCODING_UNKNOWN  0
+
+/** The FilePath character encoding is locale-dependent */
+#define APR_FILEPATH_ENCODING_LOCALE   1
+
+/** The FilePath character encoding is UTF-8 */
+#define APR_FILEPATH_ENCODING_UTF8     2
+/** @} */
+/**
+ * Determine the encoding used internally by the FilePath functions
+ * @ingroup apr_filepath_encoding
+ * @param style points to a variable which receives the encoding style flag
+ * @param p the pool to allocate any working storage
+ * @deffunc apr_status_t apr_filepath_encoding(int *style, apr_pool_t *p)
+ * @remark Use @c apr_os_locale_encoding and/or @c apr_os_default_encoding
+ * to get the name of the path encoding if it's not UTF-8.
+ */
+APR_DECLARE(apr_status_t) apr_filepath_encoding(int *style, apr_pool_t *p);
+
 
 /** @} */
 

@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2000-2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2000-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -155,7 +155,8 @@ APR_DECLARE(apr_status_t) apr_filepath_root(const char **rootpath,
 
     return APR_EINCOMPLETE;
 
-#else
+#else /* ndef(NETWARE) */
+
     char seperator[2] = { (flags & APR_FILEPATH_NATIVE) ? '\\' : '/', 0};
     const char *delim1;
     const char *delim2;
@@ -361,7 +362,8 @@ APR_DECLARE(apr_status_t) apr_filepath_root(const char **rootpath,
 
     /* Nothing interesting */
     return APR_ERELATIVE;
-#endif
+
+#endif /* ndef(NETWARE) */
 }
 
 
@@ -832,7 +834,7 @@ APR_DECLARE(apr_status_t) apr_filepath_merge(char **newpath,
      * is still within given basepath.  Note that the root path 
      * segment is thoroughly tested prior to path parsing.
      */
-    if (flags & APR_FILEPATH_NOTABOVEROOT && (keptlen - rootlen) < baselen) {
+    if (flags & APR_FILEPATH_NOTABOVEROOT) {
         if (memcmp(basepath, path + rootlen, baselen))
             return APR_EABOVEROOT;
 
@@ -950,9 +952,16 @@ APR_DECLARE(apr_status_t) apr_filepath_merge(char **newpath,
             if (rv != APR_SUCCESS) {
                 if (APR_STATUS_IS_ENOENT(rv))
                     break;
+                if (APR_STATUS_IS_EPATHWILD(rv))
+                    /* This path included wildcards.  The path elements
+                     * that did not contain wildcards are canonicalized,
+                     * so we will return the path, although later elements
+                     * don't necessarily exist, and aren't canonical.
+                     */
+                    break;
                 else if (APR_STATUS_IS_ENOTDIR(rv))
                     /* This is a little more serious, we just added a name
-                     * onto a filename (think http's CGI MORE_INFO)
+                     * onto a filename (think http's PATH_INFO)
                      * If the caller is foolish enough to do this, we expect
                      * the've already canonicalized the root) that they knew
                      * what they are doing :(
@@ -966,5 +975,20 @@ APR_DECLARE(apr_status_t) apr_filepath_merge(char **newpath,
 
     *newpath = apr_pmemdup(p, path, pathlen + 1);
     (*newpath)[pathlen] = '\0';
+    return APR_SUCCESS;
+}
+
+
+APR_DECLARE(apr_status_t) apr_filepath_encoding(int *style, apr_pool_t *p)
+{
+#if APR_HAS_UNICODE_FS
+    IF_WIN_OS_IS_UNICODE
+    {
+        *style = APR_FILEPATH_ENCODING_UTF8;
+        return APR_SUCCESS;
+    }
+#endif
+
+    *style = APR_FILEPATH_ENCODING_LOCALE;
     return APR_SUCCESS;
 }

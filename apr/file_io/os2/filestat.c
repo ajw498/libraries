@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2000-2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2000-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -69,6 +69,7 @@ static void FS3_to_finfo(apr_finfo_t *finfo, FILESTATUS3 *fstatus)
         finfo->filetype = APR_DIR;
     else
         finfo->filetype = APR_REG;
+    /* XXX: No other possible types from FS3? */
 
     finfo->user = 0;
     finfo->group = 0;
@@ -108,6 +109,12 @@ static apr_status_t handle_type(apr_filetype_e *ftype, HFILE file)
         case 2:
             *ftype = APR_PIPE;
             break;
+
+        default:
+            /* Brian, is this correct???
+             */
+            *ftype = APR_UNKFILE;
+            break;
         }
 
         return APR_SUCCESS;
@@ -130,6 +137,7 @@ APR_DECLARE(apr_status_t) apr_file_info_get(apr_finfo_t *finfo, apr_int32_t want
 
     if (rc == 0) {
         FS3_to_finfo(finfo, &fstatus);
+        finfo->fname = thefile->fname;
 
         if (finfo->filetype == APR_REG) {
             if (thefile->isopen) {
@@ -164,6 +172,7 @@ APR_DECLARE(apr_status_t) apr_stat(apr_finfo_t *finfo, const char *fname,
     
     if (rc == 0) {
         FS3_to_finfo(finfo, &fstatus);
+        finfo->fname = fname;
 
         if (wanted & APR_FINFO_NAME) {
             ULONG count = 1;

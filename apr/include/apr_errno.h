@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2000-2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2000-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -226,6 +226,7 @@ APR_DECLARE(char *) apr_strerror(apr_status_t statcode, char *buf,
  * APR_EGENERAL     General failure (specific information not available)
  * APR_EBADIP       The specified IP address is invalid
  * APR_EBADMASK     The specified netmask is invalid
+ * APR_ESYMNOTFOUND Could not find the requested symbol
  * </PRE>
  *
  * <PRE>
@@ -307,6 +308,10 @@ APR_DECLARE(char *) apr_strerror(apr_status_t statcode, char *buf,
 #define APR_EABOVEROOT     (APR_OS_START_ERROR + 23)
 /** @see APR_STATUS_IS_EBADPATH */
 #define APR_EBADPATH       (APR_OS_START_ERROR + 24)
+/** @see APR_STATUS_IS_EPATHWILD */
+#define APR_EPATHWILD      (APR_OS_START_ERROR + 25)
+/** @see APR_STATUS_IS_ESYMNOTFOUND */
+#define APR_ESYMNOTFOUND   (APR_OS_START_ERROR + 26)
 
 /* APR ERROR VALUE TESTS */
 /** 
@@ -364,7 +369,12 @@ APR_DECLARE(char *) apr_strerror(apr_status_t statcode, char *buf,
  * APR was unable to open the dso object.  
  * For more information call apr_dso_error().
  */
+#if defined(WIN32)
+#define APR_STATUS_IS_EDSOOPEN(s)       ((s) == APR_EDSOOPEN \
+                       || APR_TO_OS_ERROR(s) == ERROR_MOD_NOT_FOUND)
+#else
 #define APR_STATUS_IS_EDSOOPEN(s)       ((s) == APR_EDSOOPEN)
+#endif
 /** The given path was absolute. */
 #define APR_STATUS_IS_EABSOLUTE(s)      ((s) == APR_EABSOLUTE)
 /** The given path was relative. */
@@ -375,6 +385,17 @@ APR_DECLARE(char *) apr_strerror(apr_status_t statcode, char *buf,
 #define APR_STATUS_IS_EABOVEROOT(s)     ((s) == APR_EABOVEROOT)
 /** The given path was bad. */
 #define APR_STATUS_IS_EBADPATH(s)       ((s) == APR_EBADPATH)
+/** The given path contained wildcards. */
+#define APR_STATUS_IS_EPATHWILD(s)      ((s) == APR_EPATHWILD)
+/** Could not find the requested symbol.
+ * For more information call apr_dso_error().
+ */
+#if defined(WIN32)
+#define APR_STATUS_IS_ESYMNOTFOUND(s)   ((s) == APR_ESYMNOTFOUND \
+                       || APR_TO_OS_ERROR(s) == ERROR_PROC_NOT_FOUND)
+#else
+#define APR_STATUS_IS_ESYMNOTFOUND(s)   ((s) == APR_ESYMNOTFOUND)
+#endif
 
 /* APR STATUS VALUES */
 /** @see APR_STATUS_IS_INCHILD */
@@ -856,7 +877,11 @@ APR_DECLARE(char *) apr_strerror(apr_status_t statcode, char *buf,
 #define APR_STATUS_IS_EACCES(s)         ((s) == APR_EACCES \
                 || (s) == APR_OS_START_SYSERR + ERROR_ACCESS_DENIED \
                 || (s) == APR_OS_START_SYSERR + ERROR_SHARING_VIOLATION)
-#define APR_STATUS_IS_EEXIST(s)         ((s) == APR_EEXIST)
+#define APR_STATUS_IS_EEXIST(s)         ((s) == APR_EEXIST \
+                || (s) == APR_OS_START_SYSERR + ERROR_OPEN_FAILED \
+                || (s) == APR_OS_START_SYSERR + ERROR_FILE_EXISTS \
+                || (s) == APR_OS_START_SYSERR + ERROR_ALREADY_EXISTS \
+                || (s) == APR_OS_START_SYSERR + ERROR_ACCESS_DENIED)
 #define APR_STATUS_IS_ENAMETOOLONG(s)   ((s) == APR_ENAMETOOLONG \
                 || (s) == APR_OS_START_SYSERR + ERROR_FILENAME_EXCED_RANGE \
                 || (s) == APR_OS_START_SYSERR + SOCENAMETOOLONG)
@@ -908,7 +933,8 @@ APR_DECLARE(char *) apr_strerror(apr_status_t statcode, char *buf,
 #define APR_STATUS_IS_EXDEV(s)          ((s) == APR_EXDEV \
                 || (s) == APR_OS_START_SYSERR + ERROR_NOT_SAME_DEVICE)
 #define APR_STATUS_IS_ENOTEMPTY(s)      ((s) == APR_ENOTEMPTY \
-                || (s) == APR_OS_START_SYSERR + ERROR_DIR_NOT_EMPTY)
+                || (s) == APR_OS_START_SYSERR + ERROR_DIR_NOT_EMPTY \
+                || (s) == APR_OS_START_SYSERR + ERROR_ACCESS_DENIED)
 
 /*
     Sorry, too tired to wrap this up for OS2... feel free to
@@ -1014,6 +1040,7 @@ APR_DECLARE(char *) apr_strerror(apr_status_t statcode, char *buf,
                 || (s) == APR_OS_START_SYSERR + ERROR_NO_PROC_SLOTS \
                 || (s) == APR_OS_START_SYSERR + ERROR_NESTING_NOT_ALLOWED \
                 || (s) == APR_OS_START_SYSERR + ERROR_MAX_THRDS_REACHED \
+                || (s) == APR_OS_START_SYSERR + ERROR_LOCK_VIOLATION \
                 || (s) == APR_OS_START_SYSERR + WSAEWOULDBLOCK)
 #define APR_STATUS_IS_EINTR(s)          ((s) == APR_EINTR \
                 || (s) == APR_OS_START_SYSERR + WSAEINTR)
@@ -1202,7 +1229,8 @@ APR_DECLARE(char *) apr_strerror(apr_status_t statcode, char *buf,
 /** cross device link */
 #define APR_STATUS_IS_EXDEV(s)           ((s) == APR_EXDEV)
 /** Directory Not Empty */
-#define APR_STATUS_IS_ENOTEMPTY(s)       ((s) == APR_ENOTEMPTY)
+#define APR_STATUS_IS_ENOTEMPTY(s)       ((s) == APR_ENOTEMPTY || \
+                                          (s) == APR_EEXIST)
 
 #endif /* !def OS2 || WIN32 */
 

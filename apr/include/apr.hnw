@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2000-2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2000-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -340,7 +340,7 @@ typedef int apr_wait_t;
 
 #define APR_PATH_MAX PATH_MAX
 
-#define APR_INT64_T_FMT          "l64d"
+#define APR_INT64_T_FMT          "lld"
 #define APR_TIME_T_FMT APR_INT64_T_FMT
 
 /* Deal with atoi64 variables ... these should move to apr_private.h */

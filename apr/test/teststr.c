@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2000-2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2000-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -142,7 +142,7 @@ static void snprintf_noNULL(CuTest *tc)
     
     /* If this test fails, we are going to seg fault. */
     apr_snprintf(buff, sizeof(buff), "%.*s", 7, testing);
-    CuAssertStrEquals(tc, buff, testing);
+    CuAssertStrNEquals(tc, buff, testing, 7);
 }
 
 static void snprintf_0NULL(CuTest *tc)

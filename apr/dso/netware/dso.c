@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2000-2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2000-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -141,7 +141,7 @@ APR_DECLARE(apr_status_t) apr_dso_sym(apr_dso_handle_sym_t *ressym,
 
     if (retval == NULL) {
         handle->errormsg = dlerror();
-        return APR_EINIT;
+        return APR_ESYMNOTFOUND;
     }
 
     symbol = apr_pcalloc(handle->pool, sizeof(sym_list));

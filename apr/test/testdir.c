@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2000-2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2000-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -192,7 +192,7 @@ static void test_readdir_onedot(CuTest *tc)
     rv = apr_dir_open(&dir, "data", p);
     CuAssertIntEquals(tc, APR_SUCCESS, rv);
 
-    rv = apr_dir_read(&finfo, APR_FINFO_NORM, dir);
+    rv = apr_dir_read(&finfo, APR_FINFO_DIRENT, dir);
     CuAssertIntEquals(tc, APR_SUCCESS, rv);
     CuAssertStrEquals(tc, ".", finfo.name);
 
@@ -209,8 +209,8 @@ static void test_readdir_twodot(CuTest *tc)
     rv = apr_dir_open(&dir, "data", p);
     CuAssertIntEquals(tc, APR_SUCCESS, rv);
 
-    rv = apr_dir_read(&finfo, APR_FINFO_NORM, dir);
-    rv = apr_dir_read(&finfo, APR_FINFO_NORM, dir);
+    rv = apr_dir_read(&finfo, APR_FINFO_DIRENT, dir);
+    rv = apr_dir_read(&finfo, APR_FINFO_DIRENT, dir);
     CuAssertIntEquals(tc, APR_SUCCESS, rv);
     CuAssertStrEquals(tc, "..", finfo.name);
 
@@ -227,14 +227,14 @@ static void test_rewind(CuTest *tc)
     rv = apr_dir_open(&dir, "data", p);
     CuAssertIntEquals(tc, APR_SUCCESS, rv);
 
-    rv = apr_dir_read(&finfo, APR_FINFO_NORM, dir);
+    rv = apr_dir_read(&finfo, APR_FINFO_DIRENT, dir);
     CuAssertIntEquals(tc, APR_SUCCESS, rv);
     CuAssertStrEquals(tc, ".", finfo.name);
 
     rv = apr_dir_rewind(dir);
     CuAssertIntEquals(tc, APR_SUCCESS, rv);
 
-    rv = apr_dir_read(&finfo, APR_FINFO_NORM, dir);
+    rv = apr_dir_read(&finfo, APR_FINFO_DIRENT, dir);
     CuAssertIntEquals(tc, APR_SUCCESS, rv);
     CuAssertStrEquals(tc, ".", finfo.name);
 

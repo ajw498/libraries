@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2000-2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2000-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -415,13 +415,20 @@ typedef  int         gid_t;
 #define APR_DECLARE_DATA             __declspec(dllimport)
 #endif
 
+#ifdef WIN64
+#define APR_SSIZE_T_FMT          "I64d"
+#define APR_SIZE_T_FMT           "I64d"
+#else
 #define APR_SSIZE_T_FMT          "d"
-
 #define APR_SIZE_T_FMT           "d"
+#endif
 
+#if APR_HAS_LARGE_FILES
 #define APR_OFF_T_FMT            "I64d"
+#else
+#define APR_OFF_T_FMT            "d"
+#endif
 
-/* XXX: Win64 portability problem? */
 #define APR_PID_T_FMT            "d"
 
 #define APR_INT64_T_FMT          "I64d"

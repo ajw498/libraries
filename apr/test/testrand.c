@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2000-2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2000-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -72,7 +72,7 @@ static void rand_exists(CuTest *tc)
      */
     for (i = 1; i <= 8; i++) {
         rv = apr_generate_random_bytes(c, i * 255);
-        CuAssertIntEquals(tc, APR_SUCCESS, rv);
+        apr_assert_success(tc, "apr_generate_random_bytes failed", rv);
     }
 #endif
 }    

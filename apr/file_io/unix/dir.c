@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2000-2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2000-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -140,12 +140,43 @@ apr_status_t apr_dir_close(apr_dir_t *thedir)
     return apr_pool_cleanup_run(thedir->pool, thedir, dir_cleanup);
 }
 
+#ifdef DIRENT_TYPE
+static apr_filetype_e filetype_from_dirent_type(int type)
+{
+    switch (type) {
+    case DT_REG:
+        return APR_REG;
+    case DT_DIR:
+        return APR_DIR;
+    case DT_LNK:
+        return APR_LNK;
+    case DT_CHR:
+        return APR_CHR;
+    case DT_BLK:
+        return APR_BLK;
+#if defined(DT_FIFO)
+    case DT_FIFO:
+        return APR_PIPE;
+#endif
+#if !defined(BEOS) && defined(DT_SOCK)
+    case DT_SOCK:
+        return APR_SOCK;
+#endif
+    default:
+        return APR_UNKFILE;
+    }
+}
+#endif
+
 apr_status_t apr_dir_read(apr_finfo_t *finfo, apr_int32_t wanted,
                           apr_dir_t *thedir)
 {
     apr_status_t ret = 0;
+#ifdef DIRENT_TYPE
+    apr_filetype_e type;
+#endif
 #if APR_HAS_THREADS && defined(_POSIX_THREAD_SAFE_FUNCTIONS) \
-    && !defined(READDIR_IS_THREAD_SAFE)
+                    && !defined(READDIR_IS_THREAD_SAFE)
     struct dirent *retent;
 
     ret = readdir_r(thedir->dirstruct, thedir->entry, &retent);
@@ -155,6 +186,17 @@ apr_status_t apr_dir_read(apr_finfo_t *finfo, apr_int32_t wanted,
      */
     if(!ret && thedir->entry != retent)
         ret = APR_ENOENT;
+
+    /* Solaris is a bit strange, if there are no more entries in the
+     * directory, it returns EINVAL.  Since this is against POSIX, we
+     * hack around the problem here.  EINVAL is possible from other
+     * readdir implementations, but only if the result buffer is too small.
+     * since we control the size of that buffer, we should never have
+     * that problem.
+     */
+    if (ret == EINVAL) {
+        ret = ENOENT;
+    }
 #else
     /* We're about to call a non-thread-safe readdir() that may
        possibly set `errno', and the logic below actually cares about
@@ -179,26 +221,36 @@ apr_status_t apr_dir_read(apr_finfo_t *finfo, apr_int32_t wanted,
         return ret;
     }
 
-    /* What we already know - and restrict the wanted test below to stat
-     * only if stat will give us what this platform supports, and we can't
-     * get it from the platform.
-     * XXX: Optimize here with d_fileno, d_type etc by platform */
-    wanted &= ~(APR_FINFO_NAME);
+#ifdef DIRENT_TYPE
+    type = filetype_from_dirent_type(thedir->entry->DIRENT_TYPE);
+    if (type != APR_UNKFILE) {
+        wanted &= ~APR_FINFO_TYPE;
+    }
+#endif
+#ifdef DIRENT_INODE
+    if (thedir->entry->DIRENT_INODE && thedir->entry->DIRENT_INODE != -1) {
+        wanted &= ~APR_FINFO_INODE;
+    }
+#endif
+
+    wanted &= ~APR_FINFO_NAME;
+
     if (wanted)
     {
         char fspec[APR_PATH_MAX];
         int off;
         apr_cpystrn(fspec, thedir->dirname, sizeof(fspec));
         off = strlen(fspec);
-        if (fspec[off - 1] != '/')
+        if ((fspec[off - 1] != '/') && (off + 1 < sizeof(fspec)))
             fspec[off++] = '/';
         apr_cpystrn(fspec + off, thedir->entry->d_name, sizeof(fspec) - off);
         ret = apr_lstat(finfo, fspec, wanted, thedir->pool);
+        /* We passed a stack name that will disappear */
+        finfo->fname = NULL;
     }
 
     if (wanted && (ret == APR_SUCCESS || ret == APR_INCOMPLETE)) {
         wanted &= ~finfo->valid;
-        ret = APR_SUCCESS;
     }
     else {
         /* We don't bail because we fail to stat, when we are only -required-
@@ -206,13 +258,22 @@ apr_status_t apr_dir_read(apr_finfo_t *finfo, apr_int32_t wanted,
          */
         finfo->pool = thedir->pool;
         finfo->valid = 0;
+#ifdef DIRENT_TYPE
+        if (type != APR_UNKFILE) {
+            finfo->filetype = type;
+            finfo->valid |= APR_FINFO_TYPE;
+        }
+#endif
+#ifdef DIRENT_INODE
+        if (thedir->entry->DIRENT_INODE && thedir->entry->DIRENT_INODE != -1) {
+            finfo->inode = thedir->entry->DIRENT_INODE;
+            finfo->valid |= APR_FINFO_INODE;
+        }
+#endif
     }
 
-    /* We passed a stack name that is now gone */
-    finfo->fname = NULL;
+    finfo->name = apr_pstrdup(thedir->pool, thedir->entry->d_name);
     finfo->valid |= APR_FINFO_NAME;
-    /* XXX: Optimize here with d_fileno, d_type etc by platform */
-    finfo->name = thedir->entry->d_name;
 
     if (wanted)
         return APR_INCOMPLETE;
