@@ -1,8 +1,8 @@
-/.cvsignore/1.1/Sat Dec  2 16:13:48 2000//
-/Makefile.in/1.14/Wed Jul 17 04:11:33 2002//
-/apr_md4.c/1.5/Wed Mar 13 20:40:47 2002//
-/apr_md5.c/1.2/Wed Jul 17 04:22:47 2002//
-/apr_sha1.c/1.26/Wed Mar 13 20:40:47 2002//
-/getuuid.c/1.2/Wed Jul 17 04:22:47 2002//
-/uuid.c/1.1/Wed Jul 17 04:11:33 2002//
+/.cvsignore/1.1/Sat Jan  4 20:55:08 2003//
+/Makefile.in/1.14/Sat Jan  4 20:55:07 2003//
+/apr_md4.c/1.6/Sat Jan  4 20:56:39 2003//
+/apr_md5.c/1.3/Sat Jan  4 20:56:39 2003//
+/apr_sha1.c/1.27/Sat Jan  4 20:56:39 2003//
+/getuuid.c/1.3/Sat Jan  4 20:56:39 2003//
+/uuid.c/1.2/Sat Jan  4 20:56:39 2003//
 D

@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2002-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -112,7 +112,7 @@ static const char *match_boyer_moore_horspool_nocase(
             }
             s_tmp--;
         }
-        s_next += shift[(int)*((const unsigned char *)s_next)];
+        s_next += shift[apr_tolower(*s_next)];
     }
     return NULL;
 }

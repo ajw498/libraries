@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2000-2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2000-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -81,10 +81,10 @@
 
 struct apr_queue_t {
     void              **data;
-    int                 nelts; /**< # elements */
-    int                 in;    /**< next empty location */
-    int                 out;   /**< next filled location */
-    int                 bounds;/**< max size of queue */
+    apr_uint32_t        nelts; /**< # elements */
+    apr_uint32_t        in;    /**< next empty location */
+    apr_uint32_t        out;   /**< next filled location */
+    apr_uint32_t        bounds;/**< max size of queue */
     apr_thread_mutex_t *one_big_mutex;
     apr_thread_cond_t  *not_empty;
     apr_thread_cond_t  *not_full;
@@ -92,7 +92,6 @@ struct apr_queue_t {
 };
 
 #ifdef QUEUE_DEBUG
-
 static void Q_DBG(char*msg, apr_queue_t *q) {
     fprintf(stderr, "%ld\t#%d in %d out %d\t%s\n", 
                     apr_os_thread_current(),
@@ -103,8 +102,6 @@ static void Q_DBG(char*msg, apr_queue_t *q) {
 #else
 #define Q_DBG(x,y) 
 #endif
-
-
 
 /**
  * Detects when the apr_queue_t is full. This utility function is expected
@@ -117,7 +114,6 @@ static void Q_DBG(char*msg, apr_queue_t *q) {
  * to be called from within critical sections, and is not threadsafe.
  */
 #define apr_queue_empty(queue) ((queue)->nelts == 0)
-
 
 /**
  * Callback routine that is called to destroy this
@@ -139,24 +135,25 @@ static apr_status_t queue_destroy(void *data)
 /**
  * Initialize the apr_queue_t.
  */
-apr_status_t apr_queue_create(apr_queue_t **q, 
-                            int queue_capacity, 
-                            apr_pool_t *a)
+APU_DECLARE(apr_status_t) apr_queue_create(apr_queue_t **q, 
+                                           apr_uint32_t queue_capacity, 
+                                           apr_pool_t *a)
 {
     apr_status_t rv;
     apr_queue_t *queue;
-    queue = apr_palloc(a, sizeof( apr_queue_t ));
+    queue = apr_palloc(a, sizeof(apr_queue_t));
     *q = queue;
 
+    /* nested doesn't work ;( */
     rv = apr_thread_mutex_create(&queue->one_big_mutex,
-                                 APR_THREAD_MUTEX_UNNESTED, /* nested doesn't work ;( */
+                                 APR_THREAD_MUTEX_UNNESTED,
                                  a);
     if (rv != APR_SUCCESS) {
         return rv;
     }
 
     rv = apr_thread_cond_create(&queue->not_empty, a);
-    if (rv!= APR_SUCCESS) {
+    if (rv != APR_SUCCESS) {
         return rv;
     }
 
@@ -173,10 +170,7 @@ apr_status_t apr_queue_create(apr_queue_t **q,
     queue->out = 0;
     queue->terminated = 0;
 
-    apr_pool_cleanup_register(a, 
-                              queue, 
-                              queue_destroy, 
-                              apr_pool_cleanup_null);
+    apr_pool_cleanup_register(a, queue, queue_destroy, apr_pool_cleanup_null);
 
     return APR_SUCCESS;
 }
@@ -186,10 +180,11 @@ apr_status_t apr_queue_create(apr_queue_t **q,
  * the push operation has completed, it signals other threads waiting
  * in apr_queue_pop() that they may continue consuming sockets.
  */
-apr_status_t apr_queue_push(apr_queue_t *queue, void *data)
+APU_DECLARE(apr_status_t) apr_queue_push(apr_queue_t *queue, void *data)
 {
     apr_status_t rv;
-    int need_signal=0;
+    int need_signal = 0;
+
     if (queue->terminated) {
         return APR_EOF; /* no more elements ever again */
     }
@@ -209,7 +204,7 @@ apr_status_t apr_queue_push(apr_queue_t *queue, void *data)
         }
         /* If we wake up and it's still empty, then we were interrupted */
         if (apr_queue_full(queue)) {
-            Q_DBG( "queue full (intr)", queue);
+            Q_DBG("queue full (intr)", queue);
             rv = apr_thread_mutex_unlock(queue->one_big_mutex);
             if (rv != APR_SUCCESS) {
                 return rv;
@@ -225,17 +220,17 @@ apr_status_t apr_queue_push(apr_queue_t *queue, void *data)
 
     /* if we were empty then signal that we aren't */
     if (apr_queue_empty(queue)) {
-        need_signal=1;
+        need_signal = 1;
     }
 
     queue->data[queue->in] = data;
-    queue->in = (queue->in +1) % queue->bounds ;
+    queue->in = (queue->in + 1) % queue->bounds;
     queue->nelts++;
 
-    if ( need_signal == 1 ) {
-        Q_DBG( "sig !empty", queue);
-        rv  = apr_thread_cond_signal(queue->not_empty);
-        if ( rv != APR_SUCCESS) {
+    if (need_signal == 1) {
+        Q_DBG("sig !empty", queue);
+        rv = apr_thread_cond_signal(queue->not_empty);
+        if (rv != APR_SUCCESS) {
             apr_thread_mutex_unlock(queue->one_big_mutex);
             return rv;
         }
@@ -244,15 +239,16 @@ apr_status_t apr_queue_push(apr_queue_t *queue, void *data)
     rv = apr_thread_mutex_unlock(queue->one_big_mutex);
     return rv;
 }
+
 /**
  * Push new data onto the queue. Blocks if the queue is full. Once
  * the push operation has completed, it signals other threads waiting
  * in apr_queue_pop() that they may continue consuming sockets.
  */
-apr_status_t apr_queue_trypush(apr_queue_t *queue, void *data)
+APU_DECLARE(apr_status_t) apr_queue_trypush(apr_queue_t *queue, void *data)
 {
     apr_status_t rv;
-    int need_signal=0;
+    int need_signal = 0;
     if (queue->terminated) {
         return APR_EOF; /* no more elements ever again */
     }
@@ -269,17 +265,17 @@ apr_status_t apr_queue_trypush(apr_queue_t *queue, void *data)
 
     /* if we were empty then signal that we aren't */
     if (apr_queue_empty(queue)) {
-        need_signal=1;
+        need_signal = 1;
     }
     
     queue->data[queue->in] = data;
-    queue->in = (queue->in +1) % queue->bounds ;
+    queue->in = (queue->in + 1) % queue->bounds;
     queue->nelts++;
 
-    if ( need_signal == 1 ) {
-        Q_DBG( "sig !empty", queue);
+    if (need_signal == 1) {
+        Q_DBG("sig !empty", queue);
         rv  = apr_thread_cond_signal(queue->not_empty);
-        if ( rv != APR_SUCCESS) {
+        if (rv != APR_SUCCESS) {
             apr_thread_mutex_unlock(queue->one_big_mutex);
             return rv;
         }
@@ -288,22 +284,24 @@ apr_status_t apr_queue_trypush(apr_queue_t *queue, void *data)
     rv = apr_thread_mutex_unlock(queue->one_big_mutex);
     return rv;
 }
+
 /**
  * not thread safe
  */
-int apr_queue_size(apr_queue_t *queue) {
+APU_DECLARE(apr_uint32_t) apr_queue_size(apr_queue_t *queue) {
     return queue->nelts;
 }
+
 /**
  * Retrieves the next item from the queue. If there are no
  * items available, it will block until one becomes available.
  * Once retrieved, the item is placed into the address specified by
  * 'data'.
  */
-apr_status_t apr_queue_pop(apr_queue_t *queue, void **data)
+APU_DECLARE(apr_status_t) apr_queue_pop(apr_queue_t *queue, void **data)
 {
     apr_status_t rv;
-    int need_signal=0;
+    int need_signal = 0;
 
     if (queue->terminated) {
         return APR_EOF; /* no more elements ever again */
@@ -325,7 +323,7 @@ apr_status_t apr_queue_pop(apr_queue_t *queue, void **data)
         }
         /* If we wake up and it's still empty, then we were interrupted */
         if (apr_queue_empty(queue)) {
-            Q_DBG( "queue empty (intr)", queue);
+            Q_DBG("queue empty (intr)", queue);
             rv = apr_thread_mutex_unlock(queue->one_big_mutex);
             if (rv != APR_SUCCESS) {
                 return rv;
@@ -339,17 +337,17 @@ apr_status_t apr_queue_pop(apr_queue_t *queue, void **data)
         }
     } 
     if (apr_queue_full(queue)) {
-        need_signal =1;
+        need_signal = 1;
     }
 
     *data = &queue->data[queue->out];
     queue->nelts--;
 
     queue->out = (queue->out + 1) % queue->bounds;
-    if ( need_signal == 1 ) {
-        Q_DBG( "signal !full", queue);
+    if (need_signal == 1) {
+        Q_DBG("signal !full", queue);
         rv = apr_thread_cond_signal(queue->not_full);
-        if ( rv != APR_SUCCESS) {
+        if (rv != APR_SUCCESS) {
             apr_thread_mutex_unlock(queue->one_big_mutex);
             return rv;
         }
@@ -365,10 +363,10 @@ apr_status_t apr_queue_pop(apr_queue_t *queue, void **data)
  * Once retrieved, the item is placed into the address specified by
  * 'data'.
  */
-apr_status_t apr_queue_trypop(apr_queue_t *queue, void **data)
+APU_DECLARE(apr_status_t) apr_queue_trypop(apr_queue_t *queue, void **data)
 {
     apr_status_t rv;
-    int need_signal=0;
+    int need_signal = 0;
 
     if (queue->terminated) {
         return APR_EOF; /* no more elements ever again */
@@ -385,17 +383,17 @@ apr_status_t apr_queue_trypop(apr_queue_t *queue, void **data)
         return APR_EAGAIN;
     } 
     if (apr_queue_full(queue)) {
-        need_signal =1;
+        need_signal = 1;
     }
 
     *data = &queue->data[queue->out];
     queue->nelts--;
 
     queue->out = (queue->out + 1) % queue->bounds;
-    if ( need_signal == 1 ) {
-        Q_DBG( "signal !full", queue);
+    if (need_signal == 1) {
+        Q_DBG("signal !full", queue);
         rv = apr_thread_cond_signal(queue->not_full);
-        if ( rv != APR_SUCCESS) {
+        if (rv != APR_SUCCESS) {
             apr_thread_mutex_unlock(queue->one_big_mutex);
             return rv;
         }
@@ -405,10 +403,10 @@ apr_status_t apr_queue_trypop(apr_queue_t *queue, void **data)
     return rv;
 }
 
-apr_status_t apr_queue_interrupt_all(apr_queue_t *queue)
+APU_DECLARE(apr_status_t) apr_queue_interrupt_all(apr_queue_t *queue)
 {
     apr_status_t rv;
-    Q_DBG( "intr all", queue);    
+    Q_DBG("intr all", queue);    
     if ((rv = apr_thread_mutex_lock(queue->one_big_mutex)) != APR_SUCCESS) {
         return rv;
     }
@@ -422,7 +420,7 @@ apr_status_t apr_queue_interrupt_all(apr_queue_t *queue)
     return APR_SUCCESS;
 }
 
-apr_status_t apr_queue_term(apr_queue_t *queue)
+APU_DECLARE(apr_status_t) apr_queue_term(apr_queue_t *queue)
 {
     apr_status_t rv;
 

@@ -212,7 +212,10 @@ SOURCE=.\hooks\apr_hooks.c
 # Begin Source File
 
 SOURCE=.\ldap\apr_ldap_compat.c
-# PROP Exclude_From_Build 1
+# End Source File
+# Begin Source File
+
+SOURCE=.\ldap\apr_ldap_url.c
 # End Source File
 # End Group
 # Begin Group "misc"
@@ -221,6 +224,10 @@ SOURCE=.\ldap\apr_ldap_compat.c
 # Begin Source File
 
 SOURCE=.\misc\apr_date.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\misc\apr_queue.c
 # End Source File
 # Begin Source File
 
@@ -329,7 +336,6 @@ InputPath=.\include\apr_ldap.hw
 
 !ENDIF 
 
-# PROP Exclude_From_Build 1
 # End Source File
 # Begin Source File
 
@@ -485,6 +491,10 @@ SOURCE=.\include\apr_hooks.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\include\apr_ldap_url.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\include\apr_md4.h
 # End Source File
 # Begin Source File
@@ -498,6 +508,10 @@ SOURCE=.\include\apr_optional.h
 # Begin Source File
 
 SOURCE=.\include\apr_optional_hooks.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\include\apr_queue.h
 # End Source File
 # Begin Source File
 

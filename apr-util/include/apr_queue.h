@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Apache Software License, Version 1.1
  *
- * Copyright (c) 2000-2002 The Apache Software Foundation.  All rights
+ * Copyright (c) 2000-2003 The Apache Software Foundation.  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -58,16 +58,30 @@
 
 #ifndef APR_QUEUE_H
 #define APR_QUEUE_H
+
 #if APR_HAS_THREADS
 /**
  * @file apr_queue.h
  * @brief Thread Safe FIFO bounded queue
+ * @note Since most implementations of the queue are backed by a condition
+ * variable implementation, it isn't available on systems without threads.
+ * Although condition variables are some times available without threads.
  */
+
+#include "apu.h"
+#include "apr_errno.h"
+#include "apr_pools.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /**
  * @defgroup APR_Util_FIFO Thread Safe FIFO bounded queue
  * @ingroup APR_Util
  * @{
  */
+
 /**
  * opaque structure
  */
@@ -79,9 +93,9 @@ typedef struct apr_queue_t apr_queue_t;
  * @param queue_capacity maximum size of the queue
  * @param a pool to allocate queue from
  */
-apr_status_t apr_queue_create(apr_queue_t **queue, 
-                            int queue_capacity, 
-                            apr_pool_t *a);
+APU_DECLARE(apr_status_t) apr_queue_create(apr_queue_t **queue, 
+                                           apr_uint32_t queue_capacity, 
+                                           apr_pool_t *a);
 
 /**
  * push/add a object to the queue, blocking if the queue is already full
@@ -92,7 +106,7 @@ apr_status_t apr_queue_create(apr_queue_t **queue,
  * @returns APR_EOF the queue has been terminated
  * @returns APR_SUCCESS on a successfull push
  */
-apr_status_t apr_queue_push(apr_queue_t *queue, void *data);
+APU_DECLARE(apr_status_t) apr_queue_push(apr_queue_t *queue, void *data);
 
 /**
  * pop/get an object from the queue, blocking if the queue is already empty
@@ -103,7 +117,7 @@ apr_status_t apr_queue_push(apr_queue_t *queue, void *data);
  * @returns APR_EOF if the queue has been terminated
  * @returns APR_SUCCESS on a successfull pop
  */
-apr_status_t apr_queue_pop(apr_queue_t *queue, void **data);
+APU_DECLARE(apr_status_t) apr_queue_pop(apr_queue_t *queue, void **data);
 
 /**
  * push/add a object to the queue, returning immediatly if the queue is full
@@ -115,7 +129,7 @@ apr_status_t apr_queue_pop(apr_queue_t *queue, void **data);
  * @returns APR_EOF the queue has been terminated
  * @returns APR_SUCCESS on a successfull push
  */
-apr_status_t apr_queue_trypush(apr_queue_t *queue, void *data);
+APU_DECLARE(apr_status_t) apr_queue_trypush(apr_queue_t *queue, void *data);
 
 /**
  * pop/get an object to the queue, returning immediatly if the queue is empty
@@ -127,7 +141,7 @@ apr_status_t apr_queue_trypush(apr_queue_t *queue, void *data);
  * @returns APR_EOF the queue has been terminated
  * @returns APR_SUCCESS on a successfull push
  */
-apr_status_t apr_queue_trypop(apr_queue_t *queue, void **data);
+APU_DECLARE(apr_status_t) apr_queue_trypop(apr_queue_t *queue, void **data);
 
 /**
  * returns the size of the queue.
@@ -137,14 +151,14 @@ apr_status_t apr_queue_trypop(apr_queue_t *queue, void **data);
  * @param queue the queue
  * @returns the size of the queue
  */
-int apr_queue_size(apr_queue_t *queue);
+APU_DECLARE(apr_uint32_t) apr_queue_size(apr_queue_t *queue);
 
 /**
  * interrupt all the threads blocking on this queue.
  *
  * @param queue the queue
  */
-apr_status_t apr_queue_interrupt_all(apr_queue_t *queue);
+APU_DECLARE(apr_status_t) apr_queue_interrupt_all(apr_queue_t *queue);
 
 /**
  * terminate all queue, sendinging a interupt to all the
@@ -152,7 +166,14 @@ apr_status_t apr_queue_interrupt_all(apr_queue_t *queue);
  *
  * @param queue the queue
  */
-apr_status_t apr_queue_term(apr_queue_t *queue);
+APU_DECLARE(apr_status_t) apr_queue_term(apr_queue_t *queue);
 
-#endif /*  APR_HAS_THREADS */
+#ifdef __cplusplus
+}
+#endif
+
+/** @} */
+
+#endif /* APR_HAS_THREADS */
+
 #endif /* APRQUEUE_H */
