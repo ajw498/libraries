@@ -52,92 +52,116 @@
  * <http://www.apache.org/>.
  */
 
-#ifndef APU_VERSION_H
-#define APU_VERSION_H
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-#include "apr_version.h"
+#include "apr_errno.h"
+#include "apr_strings.h"
+#include "apr_file_io.h"
+#include "apr_thread_proc.h"
+#include "apr_md5.h"
 
-#include "apu.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/**
- * @file apu_version.h
- * @brief 
- * 
- * APR-util's Version
- *
- * There are several different mechanisms for accessing the version. There
- * is a string form, and a set of numbers; in addition, there are constants
- * which can be compiled into your application, and you can query the library
- * being used for its actual version.
- *
- * Note that it is possible for an application to detect that it has been
- * compiled against a different version of APU by use of the compile-time
- * constants and the use of the run-time query function.
- *
- * APU version numbering follows the guidelines specified in:
- *
- *     http://apr.apache.org/versioning.html
+static struct {
+    const char *password;
+    const char *hash;
+} passwords[] =
+{
+/*
+  passwords and hashes created with Apache's htpasswd utility like this:
+  
+  htpasswd -c -b passwords pass1 pass1
+  htpasswd -b passwords pass2 pass2
+  htpasswd -b passwords pass3 pass3
+  htpasswd -b passwords pass4 pass4
+  htpasswd -b passwords pass5 pass5
+  htpasswd -b passwords pass6 pass6
+  htpasswd -b passwords pass7 pass7
+  htpasswd -b passwords pass8 pass8
+  (insert Perl one-liner to convert to initializer :) )
  */
+    {"pass1", "1fWDc9QWYCWrQ"},
+    {"pass2", "1fiGx3u7QoXaM"},
+    {"pass3", "1fzijMylTiwCs"},
+    {"pass4", "nHUYc8U2UOP7s"},
+    {"pass5", "nHpETGLGPwAmA"},
+    {"pass6", "nHbsbWmJ3uyhc"},
+    {"pass7", "nHQ3BbF0Y9vpI"},
+    {"pass8", "nHZA1rViSldQk"}
+};
+static int num_passwords = sizeof(passwords) / sizeof(passwords[0]);
 
-/* The numeric compile-time version constants. These constants are the
- * authoritative version numbers for APU. 
- */
+static void check_rv(apr_status_t rv)
+{
+    if (rv != APR_SUCCESS) {
+        fprintf(stderr, "bailing\n");
+        exit(1);
+    }
+}
 
-/** major version 
- * Major API changes that could cause compatibility problems for older
- * programs such as structure size changes.  No binary compatibility is
- * possible across a change in the major version.
- */
-#define APU_MAJOR_VERSION       1
+static void test(void)
+{
+    int i;
 
-/** 
- * Minor API changes that do not cause binary compatibility problems.
- * Should be reset to 0 when upgrading APU_MAJOR_VERSION
- */
-#define APU_MINOR_VERSION       0
+    for (i = 0; i < num_passwords; i++) {
+        apr_status_t rv = apr_password_validate(passwords[i].password,
+                                                passwords[i].hash);
+        assert(rv == APR_SUCCESS);
+    }
+}
 
-/** patch level */
-#define APU_PATCH_VERSION       0
+#if APR_HAS_THREADS
 
-/** 
- *  This symbol is defined for internal, "development" copies of APU. This
- *  symbol will be #undef'd for releases. 
- */
-#define APU_IS_DEV_VERSION
+static void * APR_THREAD_FUNC testing_thread(apr_thread_t *thd,
+                                             void *data)
+{
+    int i;
 
+    for (i = 0; i < 100; i++) {
+        test();
+    }
+    return APR_SUCCESS;
+}
 
-/** The formatted string of APU's version */
-#define APU_VERSION_STRING \
-     APR_STRINGIFY(APU_MAJOR_VERSION) "." \
-     APR_STRINGIFY(APU_MINOR_VERSION) "." \
-     APR_STRINGIFY(APU_PATCH_VERSION) \
-     APU_IS_DEV_STRING
+static void thread_safe_test(apr_pool_t *p)
+{
+#define NUM_THR 20
+    apr_thread_t *my_threads[NUM_THR];
+    int i;
+    apr_status_t rv;
+    
+    for (i = 0; i < NUM_THR; i++) {
+        rv = apr_thread_create(&my_threads[i], NULL, testing_thread, NULL, p);
+        check_rv(rv);
+    }
 
-/**
- * Return APR-util's version information information in a numeric form.
- *
- *  @param pvsn Pointer to a version structure for returning the version
- *              information.
- */
-APU_DECLARE(void) apu_version(apr_version_t *pvsn);
-
-/** Return APU's version information as a string. */
-APU_DECLARE(const char *) apu_version_string(void);
-
-
-/** Internal: string form of the "is dev" flag */
-#ifdef APU_IS_DEV_VERSION
-#define APU_IS_DEV_STRING "-dev"
-#else
-#define APU_IS_DEV_STRING ""
-#endif
-
-#ifdef __cplusplus
+    for (i = 0; i < NUM_THR; i++) {
+        apr_thread_join(&rv, my_threads[i]);
+    }
 }
 #endif
 
-#endif /* APU_VERSION_H */
+int main(void)
+{
+    apr_status_t rv;
+    apr_pool_t *p;
+
+    rv = apr_initialize();
+    check_rv(rv);
+    rv = apr_pool_create(&p, NULL);
+    check_rv(rv);
+    atexit(apr_terminate);
+
+    /* before creating any threads, test it first just to check
+     * for problems with the test driver
+     */
+    printf("dry run\n");
+    test();
+
+#if APR_HAS_THREADS
+    printf("thread-safe test\n");
+    thread_safe_test(p);
+#endif
+    
+    return 0;
+}

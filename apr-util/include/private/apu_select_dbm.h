@@ -52,92 +52,15 @@
  * <http://www.apache.org/>.
  */
 
-#ifndef APU_VERSION_H
-#define APU_VERSION_H
+#ifndef APU_SELECT_DBM_H
+#define APU_SELECT_DBM_H
 
-#include "apr_version.h"
+/*
+** The following macros control what features APRUTIL will use
+*/
+#define APU_USE_SDBM    1
+#define APU_USE_NDBM    0
+#define APU_USE_GDBM    0
+#define APU_USE_DB      0
 
-#include "apu.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/**
- * @file apu_version.h
- * @brief 
- * 
- * APR-util's Version
- *
- * There are several different mechanisms for accessing the version. There
- * is a string form, and a set of numbers; in addition, there are constants
- * which can be compiled into your application, and you can query the library
- * being used for its actual version.
- *
- * Note that it is possible for an application to detect that it has been
- * compiled against a different version of APU by use of the compile-time
- * constants and the use of the run-time query function.
- *
- * APU version numbering follows the guidelines specified in:
- *
- *     http://apr.apache.org/versioning.html
- */
-
-/* The numeric compile-time version constants. These constants are the
- * authoritative version numbers for APU. 
- */
-
-/** major version 
- * Major API changes that could cause compatibility problems for older
- * programs such as structure size changes.  No binary compatibility is
- * possible across a change in the major version.
- */
-#define APU_MAJOR_VERSION       1
-
-/** 
- * Minor API changes that do not cause binary compatibility problems.
- * Should be reset to 0 when upgrading APU_MAJOR_VERSION
- */
-#define APU_MINOR_VERSION       0
-
-/** patch level */
-#define APU_PATCH_VERSION       0
-
-/** 
- *  This symbol is defined for internal, "development" copies of APU. This
- *  symbol will be #undef'd for releases. 
- */
-#define APU_IS_DEV_VERSION
-
-
-/** The formatted string of APU's version */
-#define APU_VERSION_STRING \
-     APR_STRINGIFY(APU_MAJOR_VERSION) "." \
-     APR_STRINGIFY(APU_MINOR_VERSION) "." \
-     APR_STRINGIFY(APU_PATCH_VERSION) \
-     APU_IS_DEV_STRING
-
-/**
- * Return APR-util's version information information in a numeric form.
- *
- *  @param pvsn Pointer to a version structure for returning the version
- *              information.
- */
-APU_DECLARE(void) apu_version(apr_version_t *pvsn);
-
-/** Return APU's version information as a string. */
-APU_DECLARE(const char *) apu_version_string(void);
-
-
-/** Internal: string form of the "is dev" flag */
-#ifdef APU_IS_DEV_VERSION
-#define APU_IS_DEV_STRING "-dev"
-#else
-#define APU_IS_DEV_STRING ""
-#endif
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* APU_VERSION_H */
+#endif	/* !APU_SELECT_DBM_H */

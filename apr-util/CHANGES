@@ -1,6 +1,55 @@
+Changes with APR-util 1.0
+
+  *) Pass error codes returned from constructors all the way back to
+     the reslist consumer. Also fix a minor reslist memory leak that could
+     happen when a constructor returns an error code.  PR 23492.
+     [Snke Tesch <st@kino-fahrplan.de>, Aaron Bannert]
+
+  *) The following header files have been removed:
+
+     apu_compat.h
+
 Changes with APR-util 0.9.4
 
+  *) Changed apr_bucket_alloc_create() so that it uses the allocator
+     from the pool that was passed in rather than creating its own.
+     Also, the bucket_allocator is now allocated from the apr_allocator_t
+     rather than using apr_palloc().  Added apr_bucket_alloc_create_ex()
+     which takes an apr_allocator_t* directly rather than an apr_pool_t*.
+     [Cliff Woolley, Jean-Jacques Clar]
 
+  *) Added debugging consistency checks to the buckets code.  Add
+     -DAPR_BUCKET_DEBUG to the build flags to enable.
+     [Cliff Woolley]
+
+  *) Make the version of the db library APU built against visible.
+     [Thom May]
+
+  *) Fix a problem with VPATH builds copying the APR rules.mk into the
+     source directory rather than the build directory.  [Justin Erenkrantz]
+
+  *) SECURITY [httpd incident CAN-2003-0189] Address a thread safety
+     issue with apr_password_validate() on AIX, Linux, Mac OS X, and
+     possibly other platforms.  [Jeff Trawick, Justin Erenkrantz]
+
+  *) Fix a problem with LDAP configuration which caused subsequent
+     configure tests to fail since LIBS contained LDAP libraries for
+     subsequent tests but LDFLAGS no longer included the path to such 
+     LDAP libraries.  [Jeff Trawick]
+
+  *) Fix a problem preventing the use of the bundled Expat when APR-util
+     is built stand-alone.  [Jeff Trawick]
+
+  *) Use the same compiler and preprocessor for the APR-util config tests
+     which were used by APR.  The user can override this via CC and CPP.
+     This was done all along for the actual build, but not necessarily
+     for the config tests.  [Jeff Trawick]
+
+  *) Fix apr_uuid_parse() on EBCDIC machines.  [Jeff Trawick]
+
+  *) Fix alignment problem when allocating memory using apr_rmm. The problem
+     showed up while trying to write a double in the memory allocated.
+     [Madhusudan Mathihalli]
 
 Changes with APR-util 0.9.3
 

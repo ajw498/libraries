@@ -59,6 +59,10 @@
 #ifndef APR_BUCKETS_H
 #define APR_BUCKETS_H
 
+#if defined(APR_BUCKET_DEBUG) && !defined(APR_RING_DEBUG)
+#define APR_RING_DEBUG
+#endif
+
 #include "apu.h"
 #include "apr_network_io.h"
 #include "apr_file_io.h"
@@ -315,6 +319,37 @@ struct apr_bucket_brigade {
  */
 typedef apr_status_t (*apr_brigade_flush)(apr_bucket_brigade *bb, void *ctx);
 
+/*
+ * define APR_BUCKET_DEBUG if you want your brigades to be checked for
+ * validity at every possible instant.  this will slow your code down
+ * substantially but is a very useful debugging tool.
+ */
+#ifdef APR_BUCKET_DEBUG
+
+#define APR_BRIGADE_CHECK_CONSISTENCY(b)				\
+        APR_RING_CHECK_CONSISTENCY(&(b)->list, apr_bucket, link)
+
+#define APR_BUCKET_CHECK_CONSISTENCY(e)					\
+        APR_RING_CHECK_ELEM_CONSISTENCY((e), apr_bucket, link)
+
+#else
+/**
+ * checks the ring pointers in a bucket brigade for consistency.  an
+ * abort() will be triggered if any inconsistencies are found.
+ *   note: this is a no-op unless APR_BUCKET_DEBUG is defined.
+ * @param b The brigade
+ */
+#define APR_BRIGADE_CHECK_CONSISTENCY(b)
+/**
+ * checks the brigade a bucket is in for ring consistency.  an
+ * abort() will be triggered if any inconsistencies are found.
+ *   note: this is a no-op unless APR_BUCKET_DEBUG is defined.
+ * @param e The bucket
+ */
+#define APR_BUCKET_CHECK_CONSISTENCY(e)
+#endif
+
+
 /**
  * Wrappers around the RING macros to reduce the verbosity of the code
  * that handles bucket brigades.
@@ -405,6 +440,7 @@ typedef apr_status_t (*apr_brigade_flush)(apr_bucket_brigade *bb, void *ctx);
 #define APR_BRIGADE_INSERT_HEAD(b, e) do {				\
 	apr_bucket *ap__b = (e);                                        \
 	APR_RING_INSERT_HEAD(&(b)->list, ap__b, apr_bucket, link);	\
+        APR_BRIGADE_CHECK_CONSISTENCY((b));				\
     } while (0)
 
 /**
@@ -415,6 +451,7 @@ typedef apr_status_t (*apr_brigade_flush)(apr_bucket_brigade *bb, void *ctx);
 #define APR_BRIGADE_INSERT_TAIL(b, e) do {				\
 	apr_bucket *ap__b = (e);					\
 	APR_RING_INSERT_TAIL(&(b)->list, ap__b, apr_bucket, link);	\
+        APR_BRIGADE_CHECK_CONSISTENCY((b));				\
     } while (0)
 
 /**
@@ -422,16 +459,20 @@ typedef apr_status_t (*apr_brigade_flush)(apr_bucket_brigade *bb, void *ctx);
  * @param a The first brigade
  * @param b The second brigade
  */
-#define APR_BRIGADE_CONCAT(a, b)					\
-	APR_RING_CONCAT(&(a)->list, &(b)->list, apr_bucket, link)
+#define APR_BRIGADE_CONCAT(a, b) do {					\
+        APR_RING_CONCAT(&(a)->list, &(b)->list, apr_bucket, link);	\
+        APR_BRIGADE_CHECK_CONSISTENCY((a));				\
+    } while (0)
 
 /**
  * Prepend brigade b onto the beginning of brigade a, leaving brigade b empty
  * @param a The first brigade
  * @param b The second brigade
  */
-#define APR_BRIGADE_PREPEND(a, b)					\
-	APR_RING_PREPEND(&(a)->list, &(b)->list, apr_bucket, link)
+#define APR_BRIGADE_PREPEND(a, b) do {					\
+        APR_RING_PREPEND(&(a)->list, &(b)->list, apr_bucket, link);	\
+        APR_BRIGADE_CHECK_CONSISTENCY((a));				\
+    } while (0)
 
 /**
  * Insert a list of buckets before a specified bucket
@@ -441,6 +482,7 @@ typedef apr_status_t (*apr_brigade_flush)(apr_bucket_brigade *bb, void *ctx);
 #define APR_BUCKET_INSERT_BEFORE(a, b) do {				\
 	apr_bucket *ap__a = (a), *ap__b = (b);				\
 	APR_RING_INSERT_BEFORE(ap__a, ap__b, link);			\
+        APR_BUCKET_CHECK_CONSISTENCY(ap__a);				\
     } while (0)
 
 /**
@@ -451,6 +493,7 @@ typedef apr_status_t (*apr_brigade_flush)(apr_bucket_brigade *bb, void *ctx);
 #define APR_BUCKET_INSERT_AFTER(a, b) do {				\
 	apr_bucket *ap__a = (a), *ap__b = (b);				\
 	APR_RING_INSERT_AFTER(ap__a, ap__b, link);			\
+        APR_BUCKET_CHECK_CONSISTENCY(ap__a);				\
     } while (0)
 
 /**
@@ -922,12 +965,28 @@ APU_DECLARE(apr_status_t) apr_brigade_vprintf(apr_bucket_brigade *b,
 /*  *****  Bucket freelist functions *****  */
 /**
  * Create a bucket allocator.
- * @param p Pool to allocate the allocator from [note: this is only
- *          used to allocate internal structures of the allocator, NOT
- *          to allocate the memory handed out by the allocator]
+ * @param p This pool's underlying apr_allocator_t is used to allocate memory
+ *          for the bucket allocator.  When the pool is destroyed, the bucket
+ *          allocator's cleanup routine will free all memory that has been
+ *          allocated from it.
+ * @remark  The reason the allocator gets its memory from the pool's
+ *          apr_allocator_t rather than from the pool itself is because
+ *          the bucket allocator will free large memory blocks back to the
+ *          allocator when it's done with them, thereby preventing memory
+ *          footprint growth that would occur if we allocated from the pool.
  * @warning The allocator must never be used by more than one thread at a time.
  */
 APU_DECLARE_NONSTD(apr_bucket_alloc_t *) apr_bucket_alloc_create(apr_pool_t *p);
+
+/**
+ * Create a bucket allocator.
+ * @param allocator This apr_allocator_t is used to allocate both the bucket
+ *          allocator and all memory handed out by the bucket allocator.  The
+ *          caller is responsible for destroying the bucket allocator and the
+ *          apr_allocator_t -- no automatic cleanups will happen.
+ * @warning The allocator must never be used by more than one thread at a time.
+ */
+APU_DECLARE_NONSTD(apr_bucket_alloc_t *) apr_bucket_alloc_create_ex(apr_allocator_t *allocator);
 
 /**
  * Destroy a bucket allocator.

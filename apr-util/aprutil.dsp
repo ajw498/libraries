@@ -49,7 +49,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo
+# ADD LIB32 /nologo /out:"LibR\aprutil-1.lib"
 
 !ELSEIF  "$(CFG)" == "aprutil - Win32 Debug"
 
@@ -73,7 +73,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo
+# ADD LIB32 /nologo /out:"LibD\aprutil-1.lib"
 
 !ENDIF 
 
@@ -434,6 +434,41 @@ InputPath=.\include\private\apu_select_dbm.hw
 # End Source File
 # Begin Source File
 
+SOURCE=.\include\apu_want.h.in
+# End Source File
+# Begin Source File
+
+SOURCE=.\include\apu_want.hnw
+# End Source File
+# Begin Source File
+
+SOURCE=.\include\apu_want.hw
+
+!IF  "$(CFG)" == "aprutil - Win32 Release"
+
+# Begin Custom Build - Creating apu_want.h from apu_want.hw
+InputPath=.\include\apu_want.hw
+
+".\include\apu_want.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	type .\include\apu_want.hw > .\include\apu_want.h
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "aprutil - Win32 Debug"
+
+# Begin Custom Build - Creating apu_want.h from apu_want.hw
+InputPath=.\include\apu_want.hw
+
+".\include\apu_want.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	type .\include\apu_want.hw > .\include\apu_want.h
+
+# End Custom Build
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
 SOURCE=.\uri\gen_uri_delims.exe
 
 !IF  "$(CFG)" == "aprutil - Win32 Release"
@@ -546,10 +581,6 @@ SOURCE=.\include\apr_xlate.h
 # Begin Source File
 
 SOURCE=.\include\apr_xml.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\include\apu_compat.h
 # End Source File
 # End Group
 # End Target

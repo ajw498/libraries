@@ -80,37 +80,47 @@ struct apr_bucket_alloc_t {
 static apr_status_t alloc_cleanup(void *data)
 {
     apr_bucket_alloc_t *list = data;
-    apr_allocator_t *allocator = list->allocator;
 
-    apr_allocator_free(allocator, list->blocks);
-    apr_allocator_destroy(allocator);
+    apr_allocator_free(list->allocator, list->blocks);
     return APR_SUCCESS;
 }
 
 APU_DECLARE_NONSTD(apr_bucket_alloc_t *) apr_bucket_alloc_create(apr_pool_t *p)
 {
-    apr_allocator_t *allocator;
-    apr_bucket_alloc_t *list;
-    apr_memnode_t *block;
+    apr_allocator_t *allocator = apr_pool_allocator_get(p);
+    apr_bucket_alloc_t *list = apr_bucket_alloc_create_ex(allocator);
 
-    apr_allocator_create(&allocator);
-    block = apr_allocator_alloc(allocator, ALLOC_AMT);
-    list = (apr_bucket_alloc_t *)block->first_avail;
     list->pool = p;
-    list->allocator = allocator;
-    list->freelist = NULL;
-    list->blocks = block;
-    block->first_avail += APR_ALIGN_DEFAULT(sizeof(*list));
-
     apr_pool_cleanup_register(list->pool, list, alloc_cleanup,
                               apr_pool_cleanup_null);
 
     return list;
 }
 
+APU_DECLARE_NONSTD(apr_bucket_alloc_t *) apr_bucket_alloc_create_ex(
+                                             apr_allocator_t *allocator)
+{
+    apr_bucket_alloc_t *list;
+    apr_memnode_t *block;
+
+    block = apr_allocator_alloc(allocator, ALLOC_AMT);
+    list = (apr_bucket_alloc_t *)block->first_avail;
+    list->pool = NULL;
+    list->allocator = allocator;
+    list->freelist = NULL;
+    list->blocks = block;
+    block->first_avail += APR_ALIGN_DEFAULT(sizeof(*list));
+
+    return list;
+}
+
 APU_DECLARE_NONSTD(void) apr_bucket_alloc_destroy(apr_bucket_alloc_t *list)
 {
-    apr_pool_cleanup_run(list->pool, list, alloc_cleanup);
+    if (list->pool) {
+        apr_pool_cleanup_kill(list->pool, list, alloc_cleanup);
+    }
+
+    apr_allocator_free(list->allocator, list->blocks);
 }
 
 APU_DECLARE_NONSTD(void *) apr_bucket_alloc(apr_size_t size, 
@@ -151,12 +161,33 @@ APU_DECLARE_NONSTD(void *) apr_bucket_alloc(apr_size_t size,
     return ((char *)node) + SIZEOF_NODE_HEADER_T;
 }
 
+#ifdef APR_BUCKET_DEBUG
+#if APR_HAVE_STDLIB_H
+#include <stdlib.h>
+#endif
+static void check_not_already_free(node_header_t *node)
+{
+    apr_bucket_alloc_t *list = node->alloc;
+    node_header_t *curr = list->freelist;
+
+    while (curr) {
+        if (node == curr) {
+            abort();
+        }
+        curr = curr->next;
+    }
+}
+#else
+#define check_not_already_free(node)
+#endif
+
 APU_DECLARE_NONSTD(void) apr_bucket_free(void *mem)
 {
     node_header_t *node = (node_header_t *)((char *)mem - SIZEOF_NODE_HEADER_T);
     apr_bucket_alloc_t *list = node->alloc;
 
     if (node->size == SMALL_NODE_SIZE) {
+        check_not_already_free(node);
         node->next = list->freelist;
         list->freelist = node;
     }

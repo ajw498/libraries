@@ -1,9 +1,9 @@
 D/conftools////
 D/lib////
-/.cvsignore/1.3/Thu Apr  3 19:41:28 2003//
-/COPYING/1.1/Thu Apr  3 19:41:22 2003//
-/Makefile.in/1.6/Thu Apr  3 19:41:25 2003//
-/README/1.1/Thu Apr  3 19:41:29 2003//
-/acconfig.h/1.1/Thu Apr  3 19:41:26 2003//
-/buildconf.sh/1.10/Thu Apr  3 19:41:27 2003//
-/configure.in/1.6/Thu Apr  3 19:41:23 2003//
+/.cvsignore/1.3/Sat Jan  4 21:15:50 2003//
+/COPYING/1.1/Sat Jan  4 21:15:49 2003//
+/Makefile.in/1.6/Sat Jan  4 21:15:37 2003//
+/README/1.1/Sat Jan  4 21:15:50 2003//
+/acconfig.h/1.1/Sat Jan  4 21:15:37 2003//
+/configure.in/1.6/Sat Jan  4 21:15:49 2003//
+/buildconf.sh/1.11/Sun Oct 26 15:02:35 2003//
