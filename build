@@ -3,12 +3,10 @@
 # Usage: build [prefix]
 #
 
-ZLIB=zlib-1.1.4
 LIBPNG=libpng-1.2.5
 REGEX=regex
 LIBJPEG=jpeg-6b
 LIBGD=gd-1.8.4
-GETTEXT=gettext-0.11.5
 
 if [ -n "$1" ]; then
  PREFIX=$1
@@ -39,11 +37,8 @@ make clean && make && make install PREFIX=$PREFIX) || exit 1
 ./build-neon    $PREFIX || exit 1
 ./build-apr     $PREFIX || exit 1
 ./build-aprutil $PREFIX || exit 1
+./build-iconv $PREFIX || exit 1
+./build-xml $PREFIX || exit 1
+./build-xslt $PREFIX || exit 1
+./build-gettext $PREFIX || exit 1
 
-
-exit 0
-
-(cd $GETTEXT; \
-./configure --with-included-gettext \
---host=arm-riscos-aof --prefix=$PREFIX \
-&& make clean && make && make install) || exit 1

@@ -1,0 +1,14 @@
+#!/bin/sh
+
+GETTEXT=gettext-0.11.5
+
+if [ -n "$1" ]; then
+ PREFIX=$1
+else
+ PREFIX=/home/riscos/cross/local
+fi
+
+(cd $GETTEXT; \
+./configure --with-included-gettext \
+--host=arm-riscos-aof --prefix=$PREFIX \
+&& make clean && make && make install) || exit 1
