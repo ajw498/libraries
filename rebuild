@@ -9,6 +9,7 @@ ZLIB=zlib-1.1.4
 LIBPNG=libpng-1.2.0
 REGEX=regex
 LIBJPEG=jpeg-6b
+LIBGD=gd-1.8.4
 
 PREFIX=/home/riscos/cross/local
 
@@ -38,7 +39,9 @@ EOF
 #(cd $LIBPNG; \
 #make clean && make PREFIX=$PREFIX && make install PREFIX=$PREFIX) || exit 1
 
-(cd $LIBJPEG; \
-./configure --host=arm-riscos-aof --prefix=$PREFIX \
-&& make clean && make && make install) || exit 1
+#(cd $LIBJPEG; \
+#./configure --host=arm-riscos-aof --prefix=$PREFIX \
+#&& make clean && make && make install-lib) || exit 1
 
+(cd $LIBGD; \
+make clean && make PREFIX=$PREFIX && make install PREFIX=$PREFIX) || exit 1
