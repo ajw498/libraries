@@ -23,11 +23,13 @@ fi
 
 BUILD=$2
 
-mkdir -p $PREFIX/include $PREFIX/libs || exit 1
+mkdir -p $PREFIX/include $PREFIX/lib || exit 1
 
 # Remove pthread.h if it is a dummy header
 PTHREAD=/home/riscos/cross/include/unixlib/pthread.h
-grep pthread_t $PTHREAD || rm -f $PTHREAD
+#grep pthread_t $PTHREAD || rm -f $PTHREAD
+# pthreads not happy with apr yet
+rm -f $PTHREAD
 
 rm -f $PREFIX/include/oslib*
 rm -f $PREFIX/lib/liboslib*
@@ -41,7 +43,7 @@ ln -s `pwd`/oslibsupport/OSLibSupport${BUILD}.o $PREFIX/lib/liboslibsupport.o
 && make clean && make && make install) || exit 1
 
 (cd $OPENSSL; ./Configure --prefix=$PREFIX \
--DNO_SYS_UN_H -DDEVRANDOM=\"urandom\" \
+-DNO_SYS_UN_H \
 gcc && make clean && make && make install) || exit 1
 
 (cd $EXPAT; \
