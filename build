@@ -10,6 +10,7 @@ LIBJPEG=jpeg-6b
 LIBGD=gd-1.8.4
 APR=apr
 APRUTIL=apr-util
+GETTEXT=gettext-0.11.5
 
 PREFIX=/home/riscos/cross/local
 
@@ -73,3 +74,9 @@ touch uri/gen_uri_delims.lo && \
 cp uri/uri_delims.h.pregen uri/uri_delims.h && \
 touch uri/uri_delims.h && \
 make && make install) || exit 1
+
+(cd $GETTEXT; \
+CFLAGS=-D_INTL_REDIRECT_MACROS ./configure \
+--host=arm-riscos-aof --prefix=$PREFIX \
+--with-included-gettext \
+&& make clean && make && make install) || exit 1
