@@ -52,7 +52,7 @@
  * <http://www.apache.org/>.
  */
 
-#include "misc.h"
+#include "apr_arch_misc.h"
 #include "apr_strings.h"
 #include "apr_lib.h"
 #include "apr_dso.h"
@@ -164,6 +164,8 @@ static char *apr_error_string(apr_status_t statcode)
         return "The given path was above the root path";
     case APR_EBADPATH:
         return "The given path misformatted or contained invalid characters";
+    case APR_EPROC_UNKNOWN:
+        return "The process is not recognized.";
     default:
         return "Error string not specified yet";
     }

@@ -52,8 +52,8 @@
  * <http://www.apache.org/>.
  */
 
-#include "win32/threadproc.h"
-#include "win32/fileio.h"
+#include "win32/apr_arch_threadproc.h"
+#include "win32/apr_arch_file_io.h"
 
 #include "apr_thread_proc.h"
 #include "apr_file_io.h"
@@ -99,59 +99,38 @@ APR_DECLARE(apr_status_t) apr_procattr_create(apr_procattr_t **new,
     return APR_SUCCESS;
 }
 
-static apr_status_t open_nt_process_pipe(apr_file_t **read, apr_file_t **write,
-                                         apr_int32_t iBlockingMode,
-                                         apr_pool_t *pool)
-{
-    apr_status_t stat;
-    BOOLEAN bAsyncRead, bAsyncWrite;
-
-    switch (iBlockingMode) {
-    case APR_FULL_BLOCK:
-        bAsyncRead = bAsyncWrite = FALSE;
-        break;
-    case APR_PARENT_BLOCK:
-        bAsyncRead = FALSE;
-        bAsyncWrite = TRUE;
-        break;
-    case APR_CHILD_BLOCK:
-        bAsyncRead = TRUE;
-        bAsyncWrite = FALSE;
-        break;
-    default:
-        bAsyncRead = TRUE;
-        bAsyncWrite = TRUE;
-    }
-    if ((stat = apr_create_nt_pipe(read, write, bAsyncRead, bAsyncWrite,
-                                   pool)) != APR_SUCCESS)
-        return stat;
-
-    return APR_SUCCESS;
-}
-
-
 APR_DECLARE(apr_status_t) apr_procattr_io_set(apr_procattr_t *attr,
-                                             apr_int32_t in, 
-                                             apr_int32_t out,
-                                             apr_int32_t err)
+                                              apr_int32_t in, 
+                                              apr_int32_t out,
+                                              apr_int32_t err)
 {
     apr_status_t stat = APR_SUCCESS;
 
     if (in) {
-        stat = open_nt_process_pipe(&attr->child_in, &attr->parent_in, in,
-                                    attr->pool);
+        /* APR_CHILD_BLOCK maps to APR_WRITE_BLOCK, while
+         * APR_PARENT_BLOCK maps to APR_READ_BLOCK, so we
+         * must transpose the CHILD/PARENT blocking flags
+         * only for the stdin pipe.  stdout/stderr naturally
+         * map to the correct mode.
+         */
+        if (in == APR_CHILD_BLOCK)
+            in = APR_READ_BLOCK;
+        else if (in == APR_PARENT_BLOCK)
+            in = APR_WRITE_BLOCK;
+        stat = apr_create_nt_pipe(&attr->child_in, &attr->parent_in, in,
+                                  attr->pool);
         if (stat == APR_SUCCESS)
             stat = apr_file_inherit_unset(attr->parent_in);
     }
     if (out && stat == APR_SUCCESS) {
-        stat = open_nt_process_pipe(&attr->parent_out, &attr->child_out, out,
-                                    attr->pool);
+        stat = apr_create_nt_pipe(&attr->parent_out, &attr->child_out, out,
+                                  attr->pool);
         if (stat == APR_SUCCESS)
             stat = apr_file_inherit_unset(attr->parent_out);
     }
     if (err && stat == APR_SUCCESS) {
-        stat = open_nt_process_pipe(&attr->parent_err, &attr->child_err, err,
-                                    attr->pool);
+        stat = apr_create_nt_pipe(&attr->parent_err, &attr->child_err, err,
+                                  attr->pool);
         if (stat == APR_SUCCESS)
             stat = apr_file_inherit_unset(attr->parent_err);
     }
@@ -300,6 +279,20 @@ static char *apr_caret_escape_args(apr_pool_t *p, const char *str)
     *d = '\0';
 
     return cmd;
+}
+
+APR_DECLARE(apr_status_t) apr_procattr_child_errfn_set(apr_procattr_t *attr,
+                                                       apr_child_errfn_t *errfn)
+{
+    /* won't ever be called on this platform, so don't save the function pointer */
+    return APR_SUCCESS;
+}
+
+APR_DECLARE(apr_status_t) apr_procattr_error_check_set(apr_procattr_t *attr,
+                                                       apr_int32_t chk)
+{
+    /* won't ever be used on this platform, so don't save the flag */
+    return APR_SUCCESS;
 }
 
 APR_DECLARE(apr_status_t) apr_proc_create(apr_proc_t *new,
@@ -699,15 +692,40 @@ APR_DECLARE(apr_status_t) apr_proc_create(apr_proc_t *new,
     return APR_SUCCESS;
 }
 
+APR_DECLARE(apr_status_t) apr_proc_wait_all_procs(apr_proc_t *proc,
+                                                  int *exitcode,
+                                                  apr_exit_why_e *exitwhy,
+                                                  apr_wait_how_e waithow,
+                                                  apr_pool_t *p)
+{
+    /* Unix does apr_proc_wait(proc(-1), exitcode, exitwhy, waithow)
+     * but Win32's apr_proc_wait won't work that way.  We can either
+     * register all APR created processes in some sort of AsyncWait
+     * thread, or simply walk from the global process pool for all 
+     * apr_pool_note_subprocess()es registered with APR.
+     */
+    return APR_ENOTIMPL;
+}
+
+static apr_exit_why_e why_from_exit_code(DWORD exit) {
+    /* See WinNT.h STATUS_ACCESS_VIOLATION and family for how
+     * this class of failures was determined
+     */
+    if (((exit & 0xC0000000) == 0xC0000000) 
+                    && !(exit & 0x3FFF0000))
+        return APR_PROC_SIGNAL;
+    else
+        return APR_PROC_EXIT;
+
+    /* ### No way to tell if Dr Watson grabbed a core, AFAICT. */
+}
+
 APR_DECLARE(apr_status_t) apr_proc_wait(apr_proc_t *proc,
                                         int *exitcode, apr_exit_why_e *exitwhy,
                                         apr_wait_how_e waithow)
 {
     DWORD stat;
     DWORD time;
-
-    if (!proc)
-        return APR_ENOPROC;
 
     if (waithow == APR_WAIT)
         time = INFINITE;
@@ -717,7 +735,9 @@ APR_DECLARE(apr_status_t) apr_proc_wait(apr_proc_t *proc,
     if ((stat = WaitForSingleObject(proc->hproc, time)) == WAIT_OBJECT_0) {
         if (GetExitCodeProcess(proc->hproc, &stat)) {
             if (exitcode)
-                *exitcode = (apr_wait_t)stat;
+                *exitcode = stat;
+            if (exitwhy)
+                *exitwhy = why_from_exit_code(stat);
             CloseHandle(proc->hproc);
             proc->hproc = NULL;
             return APR_CHILD_DONE;

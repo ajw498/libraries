@@ -56,7 +56,7 @@
 #include <nks/fsio.h>
 #include <nks/errno.h>
 
-#include "fileio.h"
+#include "apr_arch_file_io.h"
 #include "apr_strings.h"
 #include "apr_portable.h"
 

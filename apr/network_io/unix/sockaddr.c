@@ -52,14 +52,12 @@
  * <http://www.apache.org/>.
  */
 
-#include "networkio.h"
+#include "apr_arch_networkio.h"
 #include "apr_strings.h"
 #include "apr.h"
 #include "apr_lib.h"
 #include "apr_strings.h"
-#ifdef NETWARE
 #include "apr_private.h"
-#endif
 
 #if APR_HAVE_STDLIB_H
 #include <stdlib.h>
@@ -930,6 +928,9 @@ APR_DECLARE(apr_status_t) apr_ipsubnet_create(apr_ipsubnet_t **ipsub, const char
 APR_DECLARE(int) apr_ipsubnet_test(apr_ipsubnet_t *ipsub, apr_sockaddr_t *sa)
 {
 #if APR_HAVE_IPV6
+    /* XXX This line will segv on Win32 build with APR_HAVE_IPV6,
+     * but without the IPV6 drivers installed.
+     */
     if (sa->sa.sin.sin_family == AF_INET) {
         if (ipsub->family == AF_INET &&
             ((sa->sa.sin.sin_addr.s_addr & ipsub->mask[0]) == ipsub->sub[0])) {

@@ -59,7 +59,7 @@ if test "x$apr_preload_done" != "xyes" ; then
         dnl If using xlc, remember it, and give it the right options.
         if $CC 2>&1 | grep 'xlc' > /dev/null; then
           APR_SETIFNULL(AIX_XLC, [yes])
-          APR_ADDTO(CFLAGS, [-qHALT=E])
+          APR_ADDTO(CFLAGS, [-qHALT=E -qinfo=pro])
         fi
 	APR_SETIFNULL(apr_iconv_inbuf_const, [1])
 	APR_SETIFNULL(apr_sysvsem_is_global, [yes])
@@ -175,8 +175,10 @@ dnl	       # Not a problem in 10.20.  Otherwise, who knows?
 	;;
     *-sco3.2v[234]*)
 	APR_ADDTO(CPPFLAGS, [-DSCO -D_REENTRANT])
-	APR_ADDTO(CFLAGS, [-Oacgiltz])
-	APR_ADDTO(LIBS, [-lPW -lmalloc _i])
+	if test "$GCC" = "no"; then
+	    APR_ADDTO(CFLAGS, [-Oacgiltz])
+	fi
+	APR_ADDTO(LIBS, [-lPW -lmalloc])
 	;;
     *-sco3.2v5*)
 	APR_ADDTO(CPPFLAGS, [-DSCO5 -D_REENTRANT])
@@ -184,7 +186,7 @@ dnl	       # Not a problem in 10.20.  Otherwise, who knows?
 	;;
     *-sco_sv*|*-SCO_SV*)
 	APR_ADDTO(CPPFLAGS, [-DSCO -D_REENTRANT])
-	APR_ADDTO(LIBS, [-lPW -lmalloc _i])
+	APR_ADDTO(LIBS, [-lPW -lmalloc])
 	;;
     *-solaris2*)
     	PLATOSVERS=`echo $host | sed 's/^.*solaris2.//'`

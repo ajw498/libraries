@@ -52,7 +52,7 @@
  * <http://www.apache.org/>.
  */
 
-#include "win32/fileio.h"
+#include "win32/apr_arch_file_io.h"
 #include "apr_file_io.h"
 #include "apr_general.h"
 #include "apr_strings.h"
@@ -67,29 +67,38 @@
 #if APR_HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
-#include "misc.h"
+#include "apr_arch_misc.h"
 
 APR_DECLARE(apr_status_t) apr_file_pipe_timeout_set(apr_file_t *thepipe, apr_interval_time_t timeout)
 {
-    if (thepipe->pipe == 1) {
+    /* Always OK to unset timeouts */
+    if (timeout == -1) {
         thepipe->timeout = timeout;
         return APR_SUCCESS;
     }
-    return APR_EINVAL;
+    if (!thepipe->pipe) {
+        return APR_ENOTIMPL;
+    }
+    if (timeout && !(thepipe->pOverlapped)) {
+        /* Cannot be nonzero if a pipe was opened blocking
+         */
+        return APR_EINVAL;
+    }
+    thepipe->timeout = timeout;
+    return APR_SUCCESS;
 }
 
 APR_DECLARE(apr_status_t) apr_file_pipe_timeout_get(apr_file_t *thepipe, apr_interval_time_t *timeout)
 {
-    if (thepipe->pipe == 1) {
-        *timeout = thepipe->timeout;
-        return APR_SUCCESS;
-    }
-    return APR_EINVAL;
+    /* Always OK to get the timeout (even if it's unset ... -1) */
+    *timeout = thepipe->timeout;
+    return APR_SUCCESS;
 }
 
 APR_DECLARE(apr_status_t) apr_file_pipe_create(apr_file_t **in, apr_file_t **out, apr_pool_t *p)
 {
-    return apr_create_nt_pipe(in, out, TRUE, TRUE, p);
+    /* Unix creates full blocking pipes. */
+    return apr_create_nt_pipe(in, out, APR_FULL_BLOCK, p);
 }
 
 /* apr_create_nt_pipe()
@@ -111,7 +120,7 @@ APR_DECLARE(apr_status_t) apr_file_pipe_create(apr_file_t **in, apr_file_t **out
  * have to poll the pipe to detect i/o on a non-blocking pipe.
  */
 apr_status_t apr_create_nt_pipe(apr_file_t **in, apr_file_t **out, 
-                                BOOLEAN bAsyncRead, BOOLEAN bAsyncWrite, 
+                                apr_int32_t blocking_mode, 
                                 apr_pool_t *p)
 {
 #ifdef _WIN32_WCE
@@ -156,7 +165,8 @@ apr_status_t apr_create_nt_pipe(apr_file_t **in, apr_file_t **out,
     if (apr_os_level >= APR_WIN_NT) {
         /* Create the read end of the pipe */
         dwOpenMode = PIPE_ACCESS_INBOUND;
-        if (bAsyncRead) {
+        if (blocking_mode == APR_WRITE_BLOCK /* READ_NONBLOCK */
+               || blocking_mode == APR_FULL_NONBLOCK) {
             dwOpenMode |= FILE_FLAG_OVERLAPPED;
             (*in)->pOverlapped = (OVERLAPPED*) apr_pcalloc(p, sizeof(OVERLAPPED));
             (*in)->pOverlapped->hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
@@ -164,7 +174,7 @@ apr_status_t apr_create_nt_pipe(apr_file_t **in, apr_file_t **out,
 
         dwPipeMode = 0;
 
-        sprintf(name, "\\\\.\\pipe\\%d.%d", getpid(), id++);
+        sprintf(name, "\\\\.\\pipe\\apr-pipe-%u.%lu", getpid(), id++);
 
         (*in)->filehand = CreateNamedPipe(name,
                                           dwOpenMode,
@@ -177,7 +187,8 @@ apr_status_t apr_create_nt_pipe(apr_file_t **in, apr_file_t **out,
 
         /* Create the write end of the pipe */
         dwOpenMode = FILE_ATTRIBUTE_NORMAL;
-        if (bAsyncWrite) {
+        if (blocking_mode == APR_READ_BLOCK /* WRITE_NONBLOCK */
+                || blocking_mode == APR_FULL_NONBLOCK) {
             dwOpenMode |= FILE_FLAG_OVERLAPPED;
             (*out)->pOverlapped = (OVERLAPPED*) apr_pcalloc(p, sizeof(OVERLAPPED));
             (*out)->pOverlapped->hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);

@@ -58,11 +58,6 @@
  * @file apr_network_io.h
  * @brief APR Network library
  */
-/**
- * @defgroup APR_Net Network Routines
- * @ingroup APR
- * @{
- */
 
 #include "apr.h"
 #include "apr_pools.h"
@@ -78,9 +73,20 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#ifndef MAX_SECS_TO_LINGER
+/**
+ * @defgroup apr_network_io Network Routines
+ * @ingroup APR 
+ * @{
+ */
+
+#ifndef APR_MAX_SECS_TO_LINGER
 /** Maximum seconds to linger */
-#define MAX_SECS_TO_LINGER 30
+#define APR_MAX_SECS_TO_LINGER 30
+#endif
+
+#ifndef MAX_SECS_TO_LINGER
+/** @deprecated @see APR_MAX_SECS_TO_LINGER */
+#define MAX_SECS_TO_LINGER APR_MAX_SECS_TO_LINGER
 #endif
 
 #ifndef APRMAXHOSTLEN
@@ -94,7 +100,7 @@ extern "C" {
 #endif
 
 /**
- * @defgroup Sock_opt Socket option definitions
+ * @defgroup apr_sockopt Socket option definitions
  * @{
  */
 #define APR_SO_LINGER        1    /**< Linger */
@@ -183,7 +189,6 @@ struct in_addr {
 #define APR_PROTO_SCTP    132   /**< SCTP */
 /** @} */
 
-
 /**
  * Enum to tell us if we're interested in remote or local socket
  */
@@ -192,8 +197,9 @@ typedef enum {
     APR_REMOTE
 } apr_interface_e;
 
-/* I guess not everybody uses inet_addr.  This defines apr_inet_addr
- * appropriately.
+/**
+ * The specific declaration of inet_addr's ... some platforms fall back
+ * inet_network (this is not good, but necessary)
  */
 
 #if APR_HAVE_INET_ADDR
@@ -263,19 +269,21 @@ struct apr_sockaddr_t {
 };
 
 #if APR_HAS_SENDFILE
-/* Define flags passed in on apr_socket_sendfile() */
+/** 
+ * Support reusing the socket on platforms which support it (from disconnect,
+ * specifically Win32.
+ * @remark Optional flag passed into apr_socket_sendfile() 
+ */
 #define APR_SENDFILE_DISCONNECT_SOCKET      1
 #endif
 
 /** A structure to encapsulate headers and trailers for apr_socket_sendfile */
 struct apr_hdtr_t {
-    /** An iovec to store the headers sent before the file. 
-     *  @defvar iovec *headers */
+    /** An iovec to store the headers sent before the file. */
     struct iovec* headers;
     /** number of headers in the iovec */
     int numheaders;
-    /** An iovec to store the trailers sent after the file. 
-     *  @defvar iovec *trailers */
+    /** An iovec to store the trailers sent after the file. */
     struct iovec* trailers;
     /** number of trailers in the iovec */
     int numtrailers;
@@ -285,7 +293,8 @@ struct apr_hdtr_t {
 
 /**
  * Create a socket.
- * @remark With APR 1.0, this function will pick up a new protocol parameter.
+ * @remark With APR 1.0, this function follows the prototype 
+ * of apr_socket_create_ex.
  * @param new_sock The new socket that has been set up.
  * @param family The address family of the socket (e.g., APR_INET).
  * @param type The type of the socket (e.g., SOCK_STREAM).
@@ -297,7 +306,8 @@ APR_DECLARE(apr_status_t) apr_socket_create(apr_socket_t **new_sock,
 
 /**
  * Create a socket.
- * @remark With APR 1.0, this function will be removed.
+ * @remark With APR 1.0, this function is deprecated and apr_socket_create 
+ * follows this prototype.
  * @param new_sock The new socket that has been set up.
  * @param family The address family of the socket (e.g., APR_INET).
  * @param type The type of the socket (e.g., SOCK_STREAM).
@@ -741,7 +751,8 @@ APR_DECLARE(apr_status_t) apr_sockaddr_ip_set(apr_sockaddr_t *sockaddr,
 
 /**
  * Return the IP address (in numeric address string format) in
- * an APR socket address.
+ * an APR socket address.  APR will allocate storage for the IP address 
+ * string from the pool of the apr_sockaddr_t.
  * @param addr The IP address.
  * @param sockaddr The socket address to reference.
  */
@@ -830,7 +841,6 @@ APR_DECLARE(apr_status_t) apr_socket_protocol_get(apr_socket_t *sock,
 
 /**
  * Set a socket to be inherited by child processes.
- * @param socket The socket to enable inheritance.
  */
 APR_DECLARE_INHERIT_SET(socket);
 
@@ -839,16 +849,17 @@ APR_DECLARE(void) apr_socket_set_inherit(apr_socket_t *skt);
 
 /**
  * Unset a socket from being inherited by child processes.
- * @param socket The socket to disable inheritance.
  */
 APR_DECLARE_INHERIT_UNSET(socket);
 
 /** @deprecated @see apr_socket_inherit_unset */
 APR_DECLARE(void) apr_socket_unset_inherit(apr_socket_t *skt);
 
+/** @} */
+
 #ifdef __cplusplus
 }
 #endif
-/** @} */
+
 #endif  /* ! APR_NETWORK_IO_H */
 

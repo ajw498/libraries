@@ -14,6 +14,7 @@
 #include "novsock2.h"
 
 #include "apr_pools.h"
+#include "apr_private.h"
 
 
 /* library-private data...*/
@@ -144,71 +145,28 @@ int DisposeLibraryData(void *data)
     return 0;
 }
 
-int setGlobalPool(void *data, int proc)
+int setGlobalPool(void *data)
 {
     APP_DATA *app_data = (APP_DATA*) get_app_data(gLibId);
 
-    if ((proc < 0) || (proc > (MAX_PROCESSORS-1))) {
-        return 0;
-    }
-
     NXLock(gLibLock);
 
-    if (app_data && !app_data->gPool[proc]) {
-        app_data->gPool[proc] = data;
+    if (app_data && !app_data->gPool) {
+        app_data->gPool = data;
     }
 
     NXUnlock(gLibLock);
     return 1;
 }
 
-void* getGlobalPool(int proc)
+void* getGlobalPool()
 {
     APP_DATA *app_data = (APP_DATA*) get_app_data(gLibId);
 
-    if ((proc < 0) || (proc > (MAX_PROCESSORS-1))) {
-        return NULL;
-    }
-
     if (app_data) {
-        return app_data->gPool[proc];
+        return app_data->gPool;
     }
 
     return NULL;
 }
-
-int setStatCache(void *data, int proc)
-{
-    APP_DATA *app_data = (APP_DATA*) get_app_data(gLibId);
-
-    if ((proc < 0) || (proc > (MAX_PROCESSORS-1))) {
-        return 0;
-    }
-
-    NXLock(gLibLock);
-
-    if (app_data && !app_data->statCache[proc]) {
-        app_data->statCache[proc] = data;
-    }
-
-    NXUnlock(gLibLock);
-    return 1;
-}
-
-void* getStatCache(int proc)
-{
-    APP_DATA *app_data = (APP_DATA*) get_app_data(gLibId);
-
-    if ((proc < 0) || (proc > (MAX_PROCESSORS-1))) {
-        return NULL;
-    }
-
-    if (app_data) {
-        return app_data->statCache[proc];
-    }
-
-    return NULL;
-}
-
-
 

@@ -52,7 +52,7 @@
  * <http://www.apache.org/>.
  */
 
-#include "fileio.h"
+#include "apr_arch_file_io.h"
 #include "fsio.h"
 #include "nks/dirio.h"
 #include "apr_file_io.h"
@@ -60,6 +60,7 @@
 #include "apr_strings.h"
 #include "apr_errno.h"
 #include "apr_hash.h"
+#include "apr_thread_rwlock.h"
 
 static apr_filetype_e filetype_from_mode(mode_t mode)
 {
@@ -87,7 +88,8 @@ static apr_filetype_e filetype_from_mode(mode_t mode)
 static void fill_out_finfo(apr_finfo_t *finfo, struct stat *info,
                            apr_int32_t wanted)
 { 
-    finfo->valid = APR_FINFO_MIN | APR_FINFO_IDENT | APR_FINFO_NLINK;
+    finfo->valid = APR_FINFO_MIN | APR_FINFO_IDENT | APR_FINFO_NLINK 
+                    | APR_FINFO_OWNER | APR_FINFO_PROT;
     finfo->protection = apr_unix_mode2perms(info->st_mode);
     finfo->filetype = filetype_from_mode(info->st_mode);
     finfo->user = info->st_uid;
@@ -184,173 +186,112 @@ APR_DECLARE(apr_status_t) apr_file_attrs_set(const char *fname,
     return apr_file_perms_set(fname, finfo.protection);
 }
 
-int cstat (const char *path, struct stat *buf, char **casedName, apr_pool_t *pool)
+static apr_status_t stat_cache_cleanup(void *data)
 {
-    apr_hash_t *statCache = (apr_hash_t *)getStatCache(CpuCurrentProcessor);
-    apr_pool_t *gPool = (apr_pool_t *)getGlobalPool(CpuCurrentProcessor);
-    apr_stat_entry_t *stat_entry;
-    struct stat *info;
-    apr_time_t now = apr_time_now();
-    NXPathCtx_t pathCtx = 0;
-    char *key;
-    int ret;
-    int found = 0;
+    apr_pool_t *p = (apr_pool_t *)getGlobalPool();
+    apr_hash_index_t *hi;
+    apr_hash_t *statCache = (apr_hash_t*)data;
+	char *key;
+    apr_ssize_t keylen;
+    NXPathCtx_t pathctx;
 
-    *casedName = NULL;
-    errno = 0;
+    for (hi = apr_hash_first(p, statCache); hi; hi = apr_hash_next(hi)) {
+        apr_hash_this(hi, (const void**)&key, &keylen, (void**)&pathctx);
 
-    /* If there isn't a global pool then just stat the file
-       and return */
-    if (!gPool) {
-        char poolname[50];
-
-        if (apr_pool_create(&gPool, NULL) != APR_SUCCESS) {
-            getcwdpath(NULL, &pathCtx, CTX_ACTUAL_CWD);
-            ret = getstat(pathCtx, path, buf, ST_STAT_BITS|ST_NAME_BIT);
-            if (ret == 0) {
-                *casedName = apr_pstrdup (pool, buf->st_name);
-                return 0;
-            }
-            else {
-                errno = ret;
-                return -1;
-            }
+        if (pathctx) {
+            NXFreePathContext(pathctx);
         }
-
-        sprintf (poolname, "cstat_mem_pool_%d", CpuCurrentProcessor);
-        apr_pool_tag(gPool, apr_pstrdup(gPool, poolname));
-
-        setGlobalPool(gPool, CpuCurrentProcessor);
     }
 
-    /* If we have a statCache hash table then use it.
-       Otherwise we need to create it and initialized it
-       with a new mutex lock. */
-    if (!statCache) {
-        statCache = apr_hash_make(gPool);
-        setStatCache((void*)statCache, CpuCurrentProcessor);
-    }
+    return APR_SUCCESS;
+}
 
-    /* If we have a statCache then try to pull the information
-       from the cache.  Otherwise just stat the file and return.*/
-    if (statCache) {
-        stat_entry = (apr_stat_entry_t*) apr_hash_get(statCache, path, APR_HASH_KEY_STRING);
-        /* If we got an entry then check the expiration time.  If the entry
-           hasn't expired yet then copy the information and return. */
-        if (stat_entry) {
-            if ((now - stat_entry->expire) <= APR_USEC_PER_SEC) {
-                memcpy (buf, &(stat_entry->info), sizeof(struct stat));
-                *casedName = apr_pstrdup (pool, stat_entry->casedName);
-                found = 1;
-            }
-        }
+int cstat (NXPathCtx_t ctx, char *path, struct stat *buf, unsigned long requestmap, apr_pool_t *p)
+{
+    apr_pool_t *gPool = (apr_pool_t *)getGlobalPool();
+    apr_hash_t *statCache = NULL;
+    apr_thread_rwlock_t *rwlock = NULL;
 
-        /* Since we are creating a separate stat cache for each processor, we
-           don't need to worry about locking the hash table before manipulating
-           it. */
-        if (!found) {
-            /* Bind the thread to the current cpu so that we don't wake
-               up on some other cpu and try to manipulate the wrong cache. */
-            NXThreadBind (CpuCurrentProcessor);
+    NXPathCtx_t pathctx = 0;
+    char *ptr = NULL, *tr;
+    int len = 0, x;
+    char *ppath;
+    char *pinfo;
 
-            /* If we don't have a stat_entry then create one, copy
-               the data and add it to the hash table. */
-            if (!stat_entry) {
-                char *dirPath = NULL, *fname = NULL;
-                char *ptr;
-                int err, len;
-                char pathbuf[256];
+    if (ctx == 1) {
 
-                getcwdpath(pathbuf, &pathCtx, CTX_ACTUAL_CWD);
-                ret = getstat(pathCtx, path, buf, ST_STAT_BITS|ST_NAME_BIT);
-
-                if (ret) {
-                    NXThreadBind (NX_THR_UNBOUND);
-                    errno = ret;
-                    return -1;
-    			}
-
-                if (filetype_from_mode(buf->st_mode) == APR_DIR) {
-                    dirPath = apr_pstrdup (pool, path);
-                    len = strlen (dirPath) - strlen(buf->st_name);
-                    dirPath[len-1] = '\0';
-                }
-                else if (filetype_from_mode(buf->st_mode) == APR_REG) {
-                    dirPath = apr_pstrdup (pool, path);
-                    ptr = strrchr (dirPath, '/');
-                    if (ptr) {
-                        *ptr = '\0';
-                    }
-                }
-
-                err = NXCreatePathContext(pathCtx, dirPath, 0, NULL, &pathCtx);
-
-                key = apr_pstrdup (gPool, path);
-                stat_entry = apr_palloc (gPool, sizeof(apr_stat_entry_t));
-                memcpy (&(stat_entry->info), buf, sizeof(struct stat));
-                stat_entry->casedName = (stat_entry->info).st_name;
-                *casedName = apr_pstrdup(pool, stat_entry->casedName);
-                stat_entry->expire = now;
-                if (err == 0) {
-                    stat_entry->pathCtx = pathCtx;
-                }
-                else {
-                    stat_entry->pathCtx = 0;
-                }
-                apr_hash_set(statCache, key, APR_HASH_KEY_STRING, stat_entry);
-            }
-            else {
-                NXDirAttrNks_t dirInfo;
-
-                /* If we have a path context then get the info the fast way.  Otherwise 
-                   just default to getting the stat info from stat() */
-                if (stat_entry->pathCtx) {
-                    ret = getstat(stat_entry->pathCtx, stat_entry->casedName, buf, 
-                                  ST_MODE_BIT|ST_ATIME_BIT|ST_MTIME_BIT|ST_CTIME_BIT|ST_SIZE_BIT|ST_NAME_BIT);
-                }
-                else {
-                    char pathbuf[256];
-                    getcwdpath(pathbuf, &pathCtx, CTX_ACTUAL_CWD);
-                    ret = getstat(pathCtx, path, buf, 
-                                  ST_MODE_BIT|ST_ATIME_BIT|ST_MTIME_BIT|ST_CTIME_BIT|ST_SIZE_BIT|ST_NAME_BIT);
-                }
+        /* If there isn't a global pool then just stat the file
+           and return */
+        if (!gPool) {
+            char poolname[50];
     
-                if (ret) {
-                    NXThreadBind (NX_THR_UNBOUND);
-                    errno = ret;
-                    return -1;
-                }
-                else {
-                    (stat_entry->info).st_atime.tv_sec = (buf->st_atime).tv_sec;
-                    (stat_entry->info).st_mtime.tv_sec = (buf->st_mtime).tv_sec;
-                    (stat_entry->info).st_ctime.tv_sec = (buf->st_ctime).tv_sec;
-                    (stat_entry->info).st_size = buf->st_size;
-                    (stat_entry->info).st_mode = buf->st_mode;
-                    memcpy ((stat_entry->info).st_name, buf->st_name, sizeof(buf->st_name));
-                    memcpy (buf, &(stat_entry->info), sizeof(struct stat));
-                }
-
-                /* If we do have a stat_entry then it must have expired.  Just
-                   copy the data and reset the expiration. */
-                *casedName = apr_pstrdup(pool, stat_entry->casedName);
-                stat_entry->expire = now;
+            if (apr_pool_create(&gPool, NULL) != APR_SUCCESS) {
+                return getstat(ctx, path, buf, requestmap);
             }
-            NXThreadBind (NX_THR_UNBOUND);
-        }
-    }
-    else {
-        getcwdpath(NULL, &pathCtx, CTX_ACTUAL_CWD);
-        ret = getstat(pathCtx, path, buf, ST_STAT_BITS|ST_NAME_BIT);
-        if (ret == 0) {
-            *casedName = apr_pstrdup(pool, buf->st_name);
+    
+            setGlobalPool(gPool);
+            apr_pool_tag(gPool, apr_pstrdup(gPool, "cstat_mem_pool"));
+    
+            statCache = apr_hash_make(gPool);
+            apr_pool_userdata_set ((void*)statCache, "STAT_CACHE", stat_cache_cleanup, gPool);
+
+            apr_thread_rwlock_create(&rwlock, gPool);
+            apr_pool_userdata_set ((void*)rwlock, "STAT_CACHE_LOCK", apr_pool_cleanup_null, gPool);
         }
         else {
-            errno = ret;
-            return -1;
+            apr_pool_userdata_get((void**)&statCache, "STAT_CACHE", gPool);
+            apr_pool_userdata_get((void**)&rwlock, "STAT_CACHE_LOCK", gPool);
+        }
+
+        if (!gPool || !statCache || !rwlock) {
+            return getstat(ctx, path, buf, requestmap);
+        }
+    
+        for (x = 0,tr = path;*tr != '\0';tr++,x++) {
+            if (*tr == '\\' || *tr == '/') {
+                ptr = tr;
+                len = x;
+            }
+            if (*tr == ':') {
+                ptr = "\\";
+                len = x;
+            }
+        }
+    
+        if (ptr) {
+            ppath = apr_pstrndup (p, path, len);
+            strlwr(ppath);
+            if (ptr[1] != '\0') {
+                ptr++;
+            }
+            pinfo = apr_pstrdup (p, ptr);
+        }
+    
+        /* If we have a statCache then try to pull the information
+           from the cache.  Otherwise just stat the file and return.*/
+        if (statCache) {
+            apr_thread_rwlock_rdlock(rwlock);
+            pathctx = (NXPathCtx_t) apr_hash_get(statCache, ppath, APR_HASH_KEY_STRING);
+            apr_thread_rwlock_unlock(rwlock);
+            if (pathctx) {
+                return getstat(pathctx, pinfo, buf, requestmap);
+            }
+            else {
+                int err;
+
+                err = NXCreatePathContext(0, ppath, 0, NULL, &pathctx);
+                if (!err) {
+                    apr_thread_rwlock_wrlock(rwlock);
+                    apr_hash_set(statCache, apr_pstrdup(gPool,ppath) , APR_HASH_KEY_STRING, (void*)pathctx);
+                    apr_thread_rwlock_unlock(rwlock);
+                    return getstat(pathctx, pinfo, buf, requestmap);
+                }
+            }
         }
     }
-    return 0;
+    return getstat(ctx, path, buf, requestmap);
 }
+
 
 APR_DECLARE(apr_status_t) apr_stat(apr_finfo_t *finfo, 
                                    const char *fname, 
@@ -358,9 +299,11 @@ APR_DECLARE(apr_status_t) apr_stat(apr_finfo_t *finfo,
 {
     struct stat info;
     int srv;
-    char *casedName = NULL;
+    NXPathCtx_t pathCtx = 0;
 
-    srv = cstat(fname, &info, &casedName, pool);
+    getcwdpath(NULL, &pathCtx, CTX_ACTUAL_CWD);
+    srv = cstat(pathCtx, (char*)fname, &info, ST_STAT_BITS|ST_NAME_BIT, pool);
+    errno = srv;
 
     if (srv == 0) {
         finfo->pool = pool;
@@ -369,10 +312,8 @@ APR_DECLARE(apr_status_t) apr_stat(apr_finfo_t *finfo,
         if (wanted & APR_FINFO_LINK)
             wanted &= ~APR_FINFO_LINK;
         if (wanted & APR_FINFO_NAME) {
-            if (casedName) {
-                finfo->name = casedName;
-                finfo->valid |= APR_FINFO_NAME;
-            }
+            finfo->name = apr_pstrdup(pool, info.st_name);
+            finfo->valid |= APR_FINFO_NAME;
         }
         return (wanted & ~finfo->valid) ? APR_INCOMPLETE : APR_SUCCESS;
     }

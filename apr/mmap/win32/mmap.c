@@ -57,7 +57,7 @@
 #include "apr_general.h"
 #include "apr_mmap.h"
 #include "apr_errno.h"
-#include "fileio.h"
+#include "apr_arch_file_io.h"
 #include "apr_portable.h"
 #include "apr_strings.h"
 
@@ -114,6 +114,9 @@ APR_DECLARE(apr_status_t) apr_mmap_create(apr_mmap_t **new, apr_file_t *file,
     DWORD offlo;
     DWORD offhi;
 
+    if (size == 0)
+        return APR_EINVAL;
+    
     if (flag & APR_MMAP_WRITE)
         fmaccess |= PAGE_READWRITE;
     else if (flag & APR_MMAP_READ)

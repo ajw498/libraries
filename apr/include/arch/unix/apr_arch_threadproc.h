@@ -53,23 +53,43 @@
  */
 
 #include "apr.h"
+#include "apr_private.h"
 #include "apr_thread_proc.h"
 #include "apr_file_io.h"
-//srj #include "apr_portable.h"
+#include "apr_arch_file_io.h"
+
+/* System headers required for thread/process library */
+#if APR_HAVE_PTHREAD_H
+#include <pthread.h>
+#endif
+#ifdef HAVE_SYS_RESOURCE_H
+#include <sys/resource.h>
+#endif
+#if APR_HAVE_SIGNAL_H
+#include <signal.h>
+#endif
+#if APR_HAVE_STRING_H
+#include <string.h>
+#endif
+#if APR_HAVE_SYS_WAIT_H
+#include <sys/wait.h>
+#endif
+#if APR_HAVE_STRING_H
+#include <string.h>
+#endif
+/* End System Headers */
+
 
 #ifndef THREAD_PROC_H
 #define THREAD_PROC_H
 
-#define SHELL_PATH "cmd.exe"
-#define APR_DEFAULT_STACK_SIZE 65536
+#define SHELL_PATH "/bin/sh"
+
+#if APR_HAS_THREADS
 
 struct apr_thread_t {
     apr_pool_t *pool;
-    NXContext_t ctx;
-    NXThreadId_t td;
-    char *thread_name;
-    apr_int32_t cancel;
-    apr_int32_t cancel_how;
+    pthread_t *td;
     void *data;
     apr_thread_start_t func;
     apr_status_t exitval;
@@ -77,15 +97,19 @@ struct apr_thread_t {
 
 struct apr_threadattr_t {
     apr_pool_t *pool;
-    apr_size_t  stack_size;
-    apr_int32_t detach;
-    char *thread_name;
+    pthread_attr_t *attr;
 };
 
 struct apr_threadkey_t {
     apr_pool_t *pool;
-    NXKey_t key;
+    pthread_key_t key;
 };
+
+struct apr_thread_once_t {
+    pthread_once_t once;
+};
+
+#endif
 
 struct apr_procattr_t {
     apr_pool_t *pool;
@@ -98,17 +122,21 @@ struct apr_procattr_t {
     char *currdir;
     apr_int32_t cmdtype;
     apr_int32_t detached;
+#ifdef RLIMIT_CPU
+    struct rlimit *limit_cpu;
+#endif
+#if defined (RLIMIT_DATA) || defined (RLIMIT_VMEM) || defined(RLIMIT_AS)
+    struct rlimit *limit_mem;
+#endif
+#ifdef RLIMIT_NPROC
+    struct rlimit *limit_nproc;
+#endif
+#ifdef RLIMIT_NOFILE
+    struct rlimit *limit_nofile;
+#endif
+    apr_child_errfn_t *errfn;
+    apr_int32_t errchk;
 };
-
-struct apr_thread_once_t {
-    unsigned long value;
-};
-
-//struct apr_proc_t {
-//    apr_pool_t *pool;
-//    pid_t pid;
-//    apr_procattr_t *attr;
-//};
 
 #endif  /* ! THREAD_PROC_H */
 

@@ -56,12 +56,16 @@
 #include "apr_private.h"
 #include "apr_general.h"
 #include "apr_portable.h"
-#include "misc.h"
+#include "apr_arch_misc.h"
 #include <wincrypt.h>
 
 
 APR_DECLARE(apr_status_t) apr_generate_random_bytes(unsigned char * buf,
+#ifdef APR_ENABLE_FOR_1_0
                                                     apr_size_t length)
+#else
+                                                    int length)
+#endif
 {
     HCRYPTPROV hProv;
     apr_status_t res = APR_SUCCESS;

@@ -59,21 +59,22 @@
 #ifndef APR_HASH_H
 #define APR_HASH_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 /**
  * @file apr_hash.h
  * @brief APR Hash Tables
  */
 
+#include "apr_pools.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
- * @defgroup APR_Hash  Hash Tables
- * @ingroup APR
+ * @defgroup apr_hash Hash Tables
+ * @ingroup APR 
  * @{
  */
-
-#include "apr_pools.h"
 
 /**
  * When passing a key to apr_hash_set or apr_hash_get, this value can be
@@ -140,6 +141,11 @@ APR_DECLARE(void *) apr_hash_get(apr_hash_t *ht, const void *key,
  * @param p The pool to allocate the apr_hash_index_t iterator. If this
  *          pool is NULL, then an internal, non-thread-safe iterator is used.
  * @param ht The hash table
+ * @remark  There is no restriction on adding or deleting hash entries during
+ * an iteration (although the results may be unpredictable unless all you do
+ * is delete the current entry) and multiple iterations can be in
+ * progress at the same time.
+
  * @example
  */
 /**
@@ -156,13 +162,8 @@ APR_DECLARE(void *) apr_hash_get(apr_hash_t *ht, const void *key,
  *     }
  *     return sum;
  * }
- * 
- * There is no restriction on adding or deleting hash entries during an
- * iteration (although the results may be unpredictable unless all you do
- * is delete the current entry) and multiple iterations can be in
- * progress at the same time.
  * </PRE>
-  */
+ */
 APR_DECLARE(apr_hash_index_t *) apr_hash_first(apr_pool_t *p, apr_hash_t *ht);
 
 /**
@@ -190,7 +191,7 @@ APR_DECLARE(void) apr_hash_this(apr_hash_index_t *hi, const void **key,
  * @param ht The hash table
  * @return The number of key/value pairs in the hash table.
  */
-APR_DECLARE(apr_uint32_t) apr_hash_count(apr_hash_t *ht);
+APR_DECLARE(unsigned int) apr_hash_count(apr_hash_t *ht);
 
 /**
  * Merge two hash tables into one new hash table. The values of the overlay
@@ -229,13 +230,12 @@ APR_DECLARE(apr_hash_t *) apr_hash_merge(apr_pool_t *p,
                                          const void *data);
 
 /**
- * Get a pointer to the pool which the hash table 
- * was created in
- * @param hash the hash table in question
+ * Get a pointer to the pool which the hash table was created in
  */
 APR_POOL_DECLARE_ACCESSOR(hash);
 
 /** @} */
+
 #ifdef __cplusplus
 }
 #endif

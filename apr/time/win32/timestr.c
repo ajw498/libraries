@@ -52,7 +52,7 @@
  * <http://www.apache.org/>.
  */
 
-#include "win32/atime.h"
+#include "win32/apr_arch_atime.h"
 #include "apr_portable.h"
 #include "apr_strings.h"
 
@@ -159,7 +159,8 @@ APR_DECLARE(apr_status_t) apr_ctime(char *date_str, apr_time_t t)
 #ifndef _WIN32_WCE
 
 int win32_strftime_extra(char *s, size_t max, const char *format,
-                         const struct tm *tm) {
+                         const struct tm *tm) 
+{
    /* If the new format string is bigger than max, the result string won't fit
     * anyway. If format strings are added, made sure the padding below is
     * enough */
@@ -191,6 +192,11 @@ int win32_strftime_extra(char *s, size_t max, const char *format,
                 memcpy(new_format + j, "%I:%M:%S %p", 11);
                 i += 2;
                 j += 11;
+                break;
+            case 'R':
+                memcpy(new_format + j, "%H:%M", 5);
+                i += 2;
+                j += 5;
                 break;
             case 'T':
                 memcpy(new_format + j, "%H:%M:%S", 8);

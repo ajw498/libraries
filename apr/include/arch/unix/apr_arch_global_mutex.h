@@ -52,50 +52,24 @@
  * <http://www.apache.org/>.
  */
 
-#ifndef NETWORK_IO_H
-#define NETWORK_IO_H
+#ifndef GLOBAL_MUTEX_H
+#define GLOBAL_MUTEX_H
 
+#include "apr.h"
 #include "apr_private.h"
-#include "apr_network_io.h"
 #include "apr_general.h"
-#include "os2calls.h"
-#if APR_HAVE_NETDB_H
-#include <netdb.h>
-#endif
+#include "apr_lib.h"
+#include "apr_global_mutex.h"
+#include "apr_arch_proc_mutex.h"
+#include "apr_arch_thread_mutex.h"
 
-struct apr_socket_t {
-    apr_pool_t *cntxt;
-    int socketdes;
-    int type;
-    int protocol;
-    apr_sockaddr_t *local_addr;
-    apr_sockaddr_t *remote_addr;
-    apr_interval_time_t timeout;
-    int nonblock;
-    int local_port_unknown;
-    int local_interface_unknown;
-    int remote_addr_unknown;
-    apr_int32_t netmask;
-    apr_int32_t inherit;
+struct apr_global_mutex_t {
+    apr_pool_t *pool;
+    apr_proc_mutex_t *proc_mutex;
+#if APR_HAS_THREADS
+    apr_thread_mutex_t *thread_mutex;
+#endif /* APR_HAS_THREADS */
 };
 
-/* Error codes returned from sock_errno() */
-#define SOCBASEERR              10000
-#define SOCEPERM                (SOCBASEERR+1)             /* Not owner */
-#define SOCESRCH                (SOCBASEERR+3)             /* No such process */
-#define SOCEINTR                (SOCBASEERR+4)             /* Interrupted system call */
-#define SOCENXIO                (SOCBASEERR+6)             /* No such device or address */
-#define SOCEBADF                (SOCBASEERR+9)             /* Bad file number */
-#define SOCEACCES               (SOCBASEERR+13)            /* Permission denied */
-#define SOCEFAULT               (SOCBASEERR+14)            /* Bad address */
-#define SOCEINVAL               (SOCBASEERR+22)            /* Invalid argument */
-#define SOCEMFILE               (SOCBASEERR+24)            /* Too many open files */
-#define SOCEPIPE                (SOCBASEERR+32)            /* Broken pipe */
-#define SOCEOS2ERR              (SOCBASEERR+100)            /* OS/2 Error */
-
-const char *apr_inet_ntop(int af, const void *src, char *dst, apr_size_t size);
-int apr_inet_pton(int af, const char *src, void *dst);
-void apr_sockaddr_vars_set(apr_sockaddr_t *, int, apr_port_t);
-
-#endif  /* ! NETWORK_IO_H */
+#endif  /* GLOBAL_MUTEX_H */
 

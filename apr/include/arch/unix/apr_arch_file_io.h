@@ -52,117 +52,108 @@
  * <http://www.apache.org/>.
  */
 
-#ifndef PROC_MUTEX_H
-#define PROC_MUTEX_H
+#ifndef FILE_IO_H
+#define FILE_IO_H
 
 #include "apr.h"
 #include "apr_private.h"
 #include "apr_general.h"
-#include "apr_lib.h"
-#include "apr_proc_mutex.h"
-#include "apr_pools.h"
-#include "apr_portable.h"
+#include "apr_tables.h"
 #include "apr_file_io.h"
-#include "fileio.h"
+#include "apr_file_info.h"
+#include "apr_errno.h"
+#include "apr_lib.h"
+#include "apr_thread_mutex.h"
 
-/* System headers required by Locks library */
-#if APR_HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-#if APR_HAVE_STDIO_H
-#include <stdio.h>
-#endif
+/* System headers the file I/O library needs */
 #if APR_HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
-
-#ifdef HAVE_SYS_IPC_H
-#include <sys/ipc.h>
+#if APR_HAVE_SYS_TYPES_H
+#include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_SEM_H
-#include <sys/sem.h>
-#endif
-#ifdef HAVE_SYS_FILE_H
-#include <sys/file.h>
-#endif
-#if APR_HAVE_STDLIB_H
-#include <stdlib.h>
-#endif
-#if APR_HAVE_UNISTD_H
-#include <unistd.h>
+#if APR_HAVE_ERRNO_H
+#include <errno.h>
 #endif
 #if APR_HAVE_STRING_H
 #include <string.h>
 #endif
-#ifdef HAVE_SYS_MMAN_H
-#include <sys/mman.h>
+#if APR_HAVE_STRINGS_H
+#include <strings.h>
 #endif
-#if APR_HAVE_PTHREAD_H
-#include <pthread.h>
+#if APR_HAVE_DIRENT_H
+#include <dirent.h>
 #endif
-#if APR_HAVE_SEMAPHORE_H
-#include <semaphore.h>
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
 #endif
-/* End System Headers */
-
-struct apr_proc_mutex_unix_lock_methods_t {
-    unsigned int flags;
-    apr_status_t (*create)(apr_proc_mutex_t *, const char *);
-    apr_status_t (*acquire)(apr_proc_mutex_t *);
-    apr_status_t (*tryacquire)(apr_proc_mutex_t *);
-    apr_status_t (*release)(apr_proc_mutex_t *);
-    apr_status_t (*cleanup)(void *);
-    apr_status_t (*child_init)(apr_proc_mutex_t **, apr_pool_t *, const char *);
-    const char *name;
-};
-typedef struct apr_proc_mutex_unix_lock_methods_t apr_proc_mutex_unix_lock_methods_t;
-
-/* bit values for flags field in apr_unix_lock_methods_t */
-#define APR_PROCESS_LOCK_MECH_IS_GLOBAL          1
-
-#if APR_HAS_POSIXSEM_SERIALIZE
-extern const apr_proc_mutex_unix_lock_methods_t apr_proc_mutex_unix_posix_methods;
+#if APR_HAVE_UNISTD_H
+#include <unistd.h>
 #endif
-#if APR_HAS_SYSVSEM_SERIALIZE
-extern const apr_proc_mutex_unix_lock_methods_t apr_proc_mutex_unix_sysv_methods;
+#if APR_HAVE_STDIO_H
+#include <stdio.h>
 #endif
-#if APR_HAS_FCNTL_SERIALIZE
-extern const apr_proc_mutex_unix_lock_methods_t apr_proc_mutex_unix_fcntl_methods;
+#if APR_HAVE_STDLIB_H
+#include <stdlib.h>
 #endif
-#if APR_HAS_FLOCK_SERIALIZE
-extern const apr_proc_mutex_unix_lock_methods_t apr_proc_mutex_unix_flock_methods;
+#if APR_HAVE_SYS_UIO_H
+#include <sys/uio.h>
 #endif
-#if APR_HAS_PROC_PTHREAD_SERIALIZE
-extern const apr_proc_mutex_unix_lock_methods_t apr_proc_mutex_unix_proc_pthread_methods;
+#if APR_HAVE_SYS_TIME_H
+#include <sys/time.h>
 #endif
-#if APR_HAS_RWLOCK_SERIALIZE
-extern const apr_proc_mutex_unix_lock_methods_t apr_proc_mutex_unix_rwlock_methods;
+#ifdef BEOS
+#include <kernel/OS.h>
 #endif
 
-
-#if !APR_HAVE_UNION_SEMUN && defined(APR_HAS_SYSVSEM_SERIALIZE)
-union semun {
-    int val;
-    struct semid_ds *buf;
-    unsigned short *array;
-};
+#if BEOS_BONE
+# ifndef BONE7
+  /* prior to BONE/7 fd_set & select were defined in sys/socket.h */
+#  include <sys/socket.h>
+# else
+  /* Be moved the fd_set stuff and also the FIONBIO definition... */
+#  include <sys/ioctl.h>
+# endif
 #endif
+/* End System headers */
 
-struct apr_proc_mutex_t {
+#define APR_FILE_BUFSIZE 4096
+
+struct apr_file_t {
     apr_pool_t *pool;
-    const apr_proc_mutex_unix_lock_methods_t *meth;
-    const apr_proc_mutex_unix_lock_methods_t *inter_meth;
-    int curr_locked;
+    int filedes;
     char *fname;
-#if APR_HAS_SYSVSEM_SERIALIZE || APR_HAS_FCNTL_SERIALIZE || APR_HAS_FLOCK_SERIALIZE
-    apr_file_t *interproc;
-#endif
-#if APR_HAS_PROC_PTHREAD_SERIALIZE
-    pthread_mutex_t *pthread_interproc;
+    apr_int32_t flags;
+    int eof_hit;
+    int is_pipe;
+    apr_interval_time_t timeout;
+    int buffered;
+    enum {BLK_UNKNOWN, BLK_OFF, BLK_ON } blocking;
+    int ungetchar;    /* Last char provided by an unget op. (-1 = no char)*/
+
+    /* Stuff for buffered mode */
+    char *buffer;
+    int bufpos;               /* Read/Write position in buffer */
+    unsigned long dataRead;   /* amount of valid data read into buffer */
+    int direction;            /* buffer being used for 0 = read, 1 = write */
+    unsigned long filePtr;    /* position in file of handle */
+#if APR_HAS_THREADS
+    struct apr_thread_mutex_t *thlock;
 #endif
 };
 
-void apr_proc_mutex_unix_setup_lock(void);
+struct apr_dir_t {
+    apr_pool_t *pool;
+    char *dirname;
+    DIR *dirstruct;
+    struct dirent *entry;
+};
 
-#endif  /* PROC_MUTEX_H */
+apr_status_t apr_unix_file_cleanup(void *);
+
+mode_t apr_unix_perms2mode(apr_fileperms_t perms);
+apr_fileperms_t apr_unix_mode2perms(mode_t mode);
+
+
+#endif  /* ! FILE_IO_H */
 

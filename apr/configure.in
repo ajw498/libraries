@@ -55,7 +55,7 @@ top_builddir="$apr_builddir"
 AC_SUBST(top_builddir)
 
 # Directory containing apr build macros, helpers, and make rules
-# NOTE: make rules (rules.mk) will be in the builddir for vpath
+# NOTE: make rules (apr_rules.mk) will be in the builddir for vpath
 #
 apr_buildout=$apr_builddir/build
 apr_builders=$apr_srcdir/build
@@ -226,7 +226,7 @@ AC_ARG_ENABLE(maintainer-mode,[  --enable-maintainer-mode  Turn on debugging and
    if test "$GCC" = "yes"; then
      APR_ADDTO(CFLAGS,[-Wall -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations])
    elif test "$AIX_XLC" = "yes"; then
-     APR_ADDTO(CFLAGS,-qfullpath -qinitauto=FE)
+     APR_ADDTO(CFLAGS,-qfullpath -qinitauto=FE -qcheck=all)
    fi
 ])dnl
 
@@ -620,7 +620,7 @@ AC_CHECK_FUNCS([getpwnam_r getpwuid_r getgrnam_r getgrgid_r])
 dnl ----------------------------- Checking for Shared Memory Support 
 echo "${nl}Checking for Shared Memory Support..."
 
-# The Posix function are in librt on Solaris. This will
+# The POSIX function are in librt on Solaris. This will
 # also help us find sem_open when doing locking below
 case $host in
    *-solaris*)
@@ -817,6 +817,7 @@ AC_SUBST(sharedmem)
 dnl ----------------------------- Checks for Any required Functions
 dnl Checks for library functions. (N.B. poll is further down)
 AC_CHECK_FUNCS(alloca calloc strcasecmp stricmp setsid isinf isnan)
+AC_CHECK_FUNCS(getenv putenv setenv unsetenv)
 AC_CHECK_FUNCS(setrlimit, [ have_setrlimit="1" ], [ have_setrlimit="0" ]) 
 AC_CHECK_FUNCS(getrlimit, [ have_getrlimit="1" ], [ have_getrlimit="0" ]) 
 AC_CHECK_FUNCS(writev)
@@ -848,6 +849,14 @@ AC_ARG_WITH(sendfile, [  --with-sendfile         Override decision to use sendfi
             ;;
         s390-*-linux-gnu)
             sendfile="0"
+            ;;
+        *aix*)
+            # compiler-independent check for 64-bit build
+            AC_CHECK_SIZEOF(void*, 4)
+            if test "x$ac_cv_sizeof_voidp" = "x8"; then
+                # sendfile not working for 64-bit build
+                sendfile="0"
+            fi
             ;;
     esac       
     if test "$orig_sendfile" != "$sendfile"; then
@@ -1432,12 +1441,13 @@ APR_CHECK_DEFINE_FILES(POLLIN, poll.h sys/poll.h)
 if test "$threads" = "1"; then
     APR_CHECK_DEFINE(PTHREAD_PROCESS_SHARED, pthread.h)
     AC_CHECK_FUNCS(pthread_mutexattr_setpshared)
-    dnl Some systems have setpshared and define PROCESS_SHARED, but don't 
-    dnl really support PROCESS_SHARED locks.  So, we must validate that we 
-    dnl can go through the steps without receiving some sort of system error.
-    dnl Linux and older versions of AIX have this problem.
-    APR_IFALLYES(header:pthread.h define:PTHREAD_PROCESS_SHARED func:pthread_mutexattr_setpshared, 
-    AC_TRY_RUN([
+    # Some systems have setpshared and define PROCESS_SHARED, but don't 
+    # really support PROCESS_SHARED locks.  So, we must validate that we 
+    # can go through the steps without receiving some sort of system error.
+    # Linux and older versions of AIX have this problem.
+    APR_IFALLYES(header:pthread.h define:PTHREAD_PROCESS_SHARED func:pthread_mutexattr_setpshared, [
+      AC_CACHE_CHECK([for working PROCESS_SHARED locks], apr_cv_process_shared_works, [
+      AC_TRY_RUN([
 #include <sys/types.h>
 #include <pthread.h>
         int main()
@@ -1455,32 +1465,26 @@ if test "$threads" = "1"; then
             if (pthread_mutex_destroy(&mutex))
                 exit(5);
             exit(0);
-        }], [], [ac_cv_func_pthread_mutexattr_setpshared=no], 
-        [ac_cv_func_pthread_mutexattr_setpshared=no]))
+        }], [apr_cv_process_shared_works=yes], [apr_cv_process_shared_works=no])])
+      # Override detection of pthread_mutexattr_setpshared
+      ac_cv_func_pthread_mutexattr_setpshared=$apr_cv_process_shared_works])
+
     if test "$ac_cv_func_pthread_mutexattr_setpshared" = "yes"; then
         AC_CHECK_FUNCS(pthread_mutexattr_setrobust_np)
         if test "$ac_cv_func_pthread_mutexattr_setrobust_np" = "no"; then
+            AC_CACHE_CHECK([for pthread_mutexattr_setrobust_np with _POSIX_THREAD_PRIO_INHERIT],
+            [apr_cv_setrobust_with_prio_inherit], [
             AC_TRY_COMPILE([#define _POSIX_THREAD_PRIO_INHERIT
 #include <sys/types.h>
 #include <pthread.h>],[
             int main()
             {
-                pthread_mutex_t mutex;
                 pthread_mutexattr_t attr;
-                if (pthread_mutexattr_init(&attr))
-                    exit(1);
-                if (pthread_mutexattr_setrobust_np(&attr, 
-                                                   PTHREAD_MUTEX_ROBUST_NP))
-                    exit(2);
-                if (pthread_mutex_init(&mutex, &attr))
-                    exit(3);
-                if (pthread_mutexattr_destroy(&attr))
-                    exit(4);
-                if (pthread_mutex_destroy(&mutex))
-                    exit(5);
-                exit(0);
-            }], [ac_cv_func_pthread_mutexattr_setrobust_np=yes], [])
-            if test "$ac_cv_func_pthread_mutexattr_setrobust_np" = "yes"; then
+                pthread_mutexattr_setrobust_np(&attr, PTHREAD_MUTEX_ROBUST_NP);
+                return 0;
+            }], [apr_cv_setrobust_with_prio_inherit=yes], [apr_cv_setrobust_with_prio_inherit=no])])
+            if test "$apr_cv_setrobust_with_prio_inherit" = "yes"; then
+                ac_cv_func_pthread_mutexattr_setrobust_np=yes
                 APR_ADDTO(CPPFLAGS, -D_POSIX_THREAD_PRIO_INHERIT)
             fi
         fi
@@ -1516,7 +1520,7 @@ APR_IFALLYES(func:semget func:semctl define:SEM_UNDO,
             APR_DECIDE(USE_SYSVSEM_SERIALIZE, [SysV IPC semget()]))
 APR_IFALLYES(header:semaphore.h func:sem_open func_sem_close dnl
              func_sem_unlink func:sem_post func_sem_wait,
-             APR_DECIDE(USE_POSIXSEM_SERIALIZE, [Posix sem_open()]))
+             APR_DECIDE(USE_POSIXSEM_SERIALIZE, [POSIX sem_open()]))
 # note: the current APR use of shared mutex requires /dev/zero
 APR_IFALLYES(header:pthread.h define:PTHREAD_PROCESS_SHARED dnl
             func:pthread_mutexattr_setpshared dnl
@@ -1575,7 +1579,7 @@ fi
 
 AC_SUBST(proclockglobal)
 
-AC_MSG_CHECKING(if Posix sems affect threads in the same process)
+AC_MSG_CHECKING(if POSIX sems affect threads in the same process)
 if test "x$apr_posixsem_is_global" = "xyes"; then
   AC_DEFINE(POSIXSEM_IS_GLOBAL, 1, 
             [Define if POSIX semaphores affect threads within the process])
@@ -1829,6 +1833,11 @@ fi
 
 AC_SUBST(have_ipv6)
 
+dnl Check for langinfo support
+
+AC_CHECK_HEADERS(langinfo.h)
+AC_CHECK_FUNCS(nl_langinfo)
+
 dnl ----------------------------- Finalize the variables
 
 echo "${nl}Restore user-defined environment settings..."
@@ -1881,14 +1890,14 @@ case $host in
 *bsdi*)
     # Check whether they've installed GNU make
     if make --version > /dev/null 2>&1; then 
-	INCLUDE_RULES="include $apr_buildout/rules.mk"
+	INCLUDE_RULES="include $apr_buildout/apr_rules.mk"
     else
 	# BSDi make
-	INCLUDE_RULES=".include \"$apr_buildout/rules.mk\""
+	INCLUDE_RULES=".include \"$apr_buildout/apr_rules.mk\""
     fi
     ;;
 *)
-    INCLUDE_RULES="include $apr_buildout/rules.mk"
+    INCLUDE_RULES="include $apr_buildout/apr_rules.mk"
     ;;
 esac
 AC_SUBST(INCLUDE_RULES)
@@ -1905,7 +1914,7 @@ test -d $dir || $MKDIR $dir
 AC_OUTPUT([
 	$MAKEFILE1 $MAKEFILE2 $MAKEFILE3
 	include/apr.h
-	build/rules.mk
+	build/apr_rules.mk
 	apr-config
 ],[
 for i in $SAVE_FILES; do

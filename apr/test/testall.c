@@ -106,6 +106,8 @@ static const struct testlist {
     {"testargs", testgetopt},
     {"testnames", testnames},
     {"testuser", testuser},
+    {"testpath", testpath},
+    {"testenv", testenv},
     {"LastTest", NULL}
 };
 

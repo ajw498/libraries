@@ -136,9 +136,9 @@ PLIB3S	= $(METROWERKS)\Novell Support\Metrowerks Support\Libraries\MSL C++\MWCPP
 # -align 4              align on 4 byte bounderies
 # -w nocmdline          disable command-line driver/parser warnings
 # -proc PII             generate code base on Pentium II instruction set
-# -inst mmx             use MMX extensions
+# -inst mmx             use MMX extensions (not used)
 
-CFLAGS = -c -nosyspath -Cpp_exceptions off -RTTI off -align 4 -w nocmdline -proc PII -inst mmx
+CFLAGS = -c -nosyspath -Cpp_exceptions off -RTTI off -align 4 -w nocmdline -proc PII
 
 # -g                    generate debugging information
 # -O0                   level 0 optimizations
@@ -152,9 +152,9 @@ ifeq "$(RELEASE)" "optimized"
 CFLAGS += -O4,p
 endif
 
-# -prefix pre_nw.h      #include pre_nw.h for all files
+# -prefix apr_arch_pre_nw.h      #include pre_nw.h for all files
 
-CFLAGS += -prefix pre_nw.h
+CFLAGS += -prefix apr_arch_pre_nw.h
 
 
 PATH:=$(PATH);$(METROWERKS)\bin;$(METROWERKS)\Other Metrowerks Tools\Command Line Tools

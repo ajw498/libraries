@@ -59,20 +59,28 @@
 #ifndef APR_ATOMIC_H
 #define APR_ATOMIC_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include "apr.h"
-#include "apr_pools.h"
-
 /**
  * @file apr_atomic.h
  * @brief APR Atomic Operations
  */
+
+#include "apr.h"
+#include "apr_pools.h"
+
+/* Platform includes for atomics */
+#if defined(NETWARE) || defined(__MVS__) /* OS/390 */
+#include <stdlib.h>
+#elif defined(__FreeBSD__)
+#include <machine/atomic.h>
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
- * @defgroup APR_Atomic Atomic operations
- * @ingroup APR
+ * @defgroup apr_atomic Atomic Operations
+ * @ingroup APR 
  * @{
  */
 
@@ -169,23 +177,32 @@ typedef LONG apr_atomic_t;
 
 #elif defined(NETWARE)
 
-#include <stdlib.h>
 #define apr_atomic_t unsigned long
 
 #define apr_atomic_add(mem, val)     atomic_add(mem,val)
-APR_DECLARE(int) apr_atomic_dec(apr_atomic_t *mem);
-#define APR_OVERRIDE_ATOMIC_DEC 1
-#define APR_OVERRIDE_ATOMIC_CASPTR 1
 #define apr_atomic_inc(mem)          atomic_inc(mem)
 #define apr_atomic_set(mem, val)     (*mem = val)
 #define apr_atomic_read(mem)         (*mem)
 #define apr_atomic_init(pool)        APR_SUCCESS
 #define apr_atomic_cas(mem,with,cmp) atomic_cmpxchg((unsigned long *)(mem),(unsigned long)(cmp),(unsigned long)(with))
-#define apr_atomic_casptr(mem,with,cmp) (void*)atomic_cmpxchg((unsigned long *)(mem),(unsigned long)(cmp),(unsigned long)(with))
+    
+int apr_atomic_dec(apr_atomic_t *mem);
+void *apr_atomic_casptr(void **mem, void *with, const void *cmp);
+#define APR_OVERRIDE_ATOMIC_DEC 1
+#define APR_OVERRIDE_ATOMIC_CASPTR 1
+
+inline int apr_atomic_dec(apr_atomic_t *mem) 
+{
+    atomic_dec(mem);
+    return *mem; 
+}
+
+inline void *apr_atomic_casptr(void **mem, void *with, const void *cmp)
+{
+    return (void*)atomic_cmpxchg((unsigned long *)mem,(unsigned long)cmp,(unsigned long)with);
+}
 
 #elif defined(__FreeBSD__)
-
-#include <machine/atomic.h>
 
 #define apr_atomic_t apr_uint32_t
 #define apr_atomic_add(mem, val)     atomic_add_int(mem,val)
@@ -194,12 +211,12 @@ APR_DECLARE(int) apr_atomic_dec(apr_atomic_t *mem);
 #define apr_atomic_set(mem, val)     atomic_set_int(mem, val)
 #define apr_atomic_read(mem)         (*mem)
 
-#elif defined(__linux__) && defined(__i386__) && !APR_FORCE_ATOMIC_GENERIC
+#elif (defined(__linux__) || defined(__EMX__)) && defined(__i386__) && !APR_FORCE_ATOMIC_GENERIC
 
 #define apr_atomic_t apr_uint32_t
 #define apr_atomic_cas(mem,with,cmp) \
 ({ apr_atomic_t prev; \
-    asm ("lock; cmpxchgl %1, %2"              \
+    asm volatile ("lock; cmpxchgl %1, %2"              \
          : "=a" (prev)               \
          : "r" (with), "m" (*(mem)), "0"(cmp) \
          : "memory"); \
@@ -247,7 +264,7 @@ apr_uint32_t apr_atomic_sub_sparc(volatile apr_atomic_t *mem, apr_uint32_t sub);
 apr_uint32_t apr_atomic_cas_sparc(volatile apr_uint32_t *mem, long with, long cmp);
 
 #elif defined(__MVS__) /* OS/390 */
-#include <stdlib.h>
+
 #define apr_atomic_t cs_t
 
 apr_int32_t apr_atomic_add(volatile apr_atomic_t *mem, apr_int32_t val);
@@ -346,6 +363,9 @@ void *apr_atomic_casptr(volatile void **mem, void *with, const void *cmp);
 #endif /* APR_ATOMIC_NEED_DEFAULT_INIT */
 
 #endif /* !DOXYGEN */
+
+/** @} */
+
 #ifdef __cplusplus
 }
 #endif

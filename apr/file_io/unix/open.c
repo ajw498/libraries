@@ -52,11 +52,11 @@
  * <http://www.apache.org/>.
  */
 
-#include "fileio.h"
+#include "apr_arch_file_io.h"
 #include "apr_strings.h"
 #include "apr_portable.h"
 #include "apr_thread_mutex.h"
-#include "inherit.h"
+#include "apr_arch_inherit.h"
 
 #ifdef NETWARE
 #include "nks/dirio.h"
@@ -68,13 +68,11 @@ apr_status_t apr_unix_file_cleanup(void *thefile)
 {
     apr_file_t *file = thefile;
     apr_status_t flush_rv = APR_SUCCESS, rv = APR_SUCCESS;
-    int rc;
 
     if (file->buffered) {
         flush_rv = apr_file_flush(file);
     }
-    rc = close(file->filedes);
-    if (rc == 0) {
+    if (close(file->filedes) == 0) {
         file->filedes = -1;
         if (file->flags & APR_DELONCLOSE) {
             unlink(file->fname);
@@ -103,11 +101,6 @@ APR_DECLARE(apr_status_t) apr_file_open(apr_file_t **new,
 #if APR_HAS_THREADS
     apr_thread_mutex_t *thlock;
     apr_status_t rv;
-#endif
-
-#ifdef NETWARE
-    apr_hash_t *statCache = (apr_hash_t *)getStatCache(CpuCurrentProcessor);
-    apr_stat_entry_t *stat_entry = NULL;
 #endif
 
     if ((flag & APR_READ) && (flag & APR_WRITE)) {
@@ -155,24 +148,12 @@ APR_DECLARE(apr_status_t) apr_file_open(apr_file_t **new,
     }
 #endif
 
-#ifdef NETWARE
-    if (statCache) {
-        stat_entry = (apr_stat_entry_t*) apr_hash_get(statCache, fname, APR_HASH_KEY_STRING);
-    }
-    if (stat_entry) {
-        errno = NXFileOpen (stat_entry->pathCtx, stat_entry->casedName, oflags, &fd);
-    }
-    else {
-#endif
     if (perm == APR_OS_DEFAULT) {
         fd = open(fname, oflags, 0666);
     }
     else {
         fd = open(fname, oflags, apr_unix_perms2mode(perm));
     } 
-#ifdef NETWARE
-    }
-#endif
     if (fd < 0) {
        return errno;
     }

@@ -55,15 +55,15 @@
 #include "apr.h"
 #include <aclapi.h>
 #include "apr_private.h"
-#include "fileio.h"
+#include "apr_arch_file_io.h"
 #include "apr_file_io.h"
 #include "apr_general.h"
 #include "apr_strings.h"
 #include "apr_errno.h"
 #include "apr_time.h"
 #include <sys/stat.h>
-#include "atime.h"
-#include "misc.h"
+#include "apr_arch_atime.h"
+#include "apr_arch_misc.h"
 
 /* We have to assure that the file name contains no '*'s, or other
  * wildcards when using FindFirstFile to recover the true file name.
@@ -410,6 +410,12 @@ APR_DECLARE(apr_status_t) apr_file_info_get(apr_finfo_t *finfo, apr_int32_t want
                                             apr_file_t *thefile)
 {
     BY_HANDLE_FILE_INFORMATION FileInfo;
+
+    if (thefile->buffered) {
+        apr_status_t rv = apr_file_flush(thefile);
+        if (rv != APR_SUCCESS)
+            return rv;
+    }
 
     if (!GetFileInformationByHandle(thefile->filehand, &FileInfo)) {
         return apr_get_os_error();

@@ -55,26 +55,25 @@
 #ifndef APR_ALLOCATOR_H
 #define APR_ALLOCATOR_H
 
+/**
+ * @file apr_allocator.h
+ * @brief APR Internal Memory Allocation
+ */
+
+#include "apr.h"
+#include "apr_errno.h"
+#define APR_WANT_MEMFUNC /**< For no good reason? */
+#include "apr_want.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /**
- * @file apr_allocator.h
- * @brief APR memory allocation
- *
- */
-/**
- * @defgroup APR_Pool_allocator Allocator
- * @ingroup APR_Pool
+ * @defgroup apr_allocator Internal Memory Allocation
+ * @ingroup APR 
  * @{
  */
-
-
-#include "apr.h"
-#include "apr_errno.h"
-#define APR_WANT_MEMFUNC
-#include "apr_want.h"
 
 /** the allocator structure */
 typedef struct apr_allocator_t apr_allocator_t;
@@ -128,7 +127,6 @@ APR_DECLARE(apr_memnode_t *) apr_allocator_alloc(apr_allocator_t *allocator,
  */
 APR_DECLARE(void) apr_allocator_free(apr_allocator_t *allocator,
                                      apr_memnode_t *memnode);
-
 
 #include "apr_pools.h"
 
@@ -202,6 +200,7 @@ APR_DECLARE(apr_thread_mutex_t *) apr_allocator_get_mutex(
 #endif /* APR_HAS_THREADS */
 
 /** @} */
+
 #ifdef __cplusplus
 }
 #endif

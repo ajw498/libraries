@@ -52,7 +52,7 @@
  * <http://www.apache.org/>.
  */
 
-#include "networkio.h"
+#include "apr_arch_networkio.h"
 #include "apr_network_io.h"
 #include "apr_general.h"
 #include "apr_lib.h"
@@ -115,7 +115,7 @@ APR_DECLARE(apr_status_t) apr_socket_opt_set(apr_socket_t *sock,
     }
     if (opt & APR_SO_LINGER) {
         li.l_onoff = on;
-        li.l_linger = MAX_SECS_TO_LINGER;
+        li.l_linger = APR_MAX_SECS_TO_LINGER;
         if (setsockopt(sock->socketdes, SOL_SOCKET, SO_LINGER, (char *) &li, sizeof(struct linger)) == -1) {
             return APR_OS2_STATUS(sock_errno());
         }

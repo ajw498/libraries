@@ -55,6 +55,11 @@
 #ifndef APR_THREAD_PROC_H
 #define APR_THREAD_PROC_H
 
+/**
+ * @file apr_thread_proc.h
+ * @brief APR Thread and Process Library
+ */
+
 #include "apr.h"
 #include "apr_file_io.h"
 #include "apr_pools.h"
@@ -65,17 +70,13 @@
 #include <sys/resource.h>
 #endif
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
+
 /**
- * @file apr_thread_proc.h
- * @brief APR Thread and Process Library
- */
-/**
- * @defgroup APR_Thread Thread Library
- * @ingroup APR
+ * @defgroup apr_thread_proc Threads and Process Functions
+ * @ingroup APR 
  * @{
  */
 
@@ -130,9 +131,8 @@ typedef enum {
 /** @see apr_procattr_limit_set */
 #define APR_LIMIT_NOFILE     3
 
-#if APR_HAS_OTHER_CHILD || defined(DOXYGEN)
 /**
- * @defgroup Other_Child Other Child Flags
+ * @defgroup APR_OC Other Child Flags
  * @{
  */
 #define APR_OC_REASON_DEATH         0     /**< child has died, caller must call
@@ -147,14 +147,14 @@ typedef enum {
                                            * kill the child) */
 #define APR_OC_REASON_LOST          4     /**< somehow the child exited without
                                            * us knowing ... buggy os? */
+#define APR_OC_REASON_RUNNING       5     /**< a health check is occuring, 
+                                           * for most maintainence functions
+                                           * this is a no-op.
+                                           */
 /** @} */
-#endif /* APR_HAS_OTHER_CHILD */
-
-/** @see apr_proc_t */
-typedef struct apr_proc_t apr_proc_t;
 
 /** The APR process type */
-struct apr_proc_t {
+typedef struct apr_proc_t {
     /** The process ID */
     pid_t pid;
     /** Parent's side of pipe to child's stdin */
@@ -166,32 +166,54 @@ struct apr_proc_t {
 #if APR_HAS_PROC_INVOKED || defined(DOXYGEN)
     /** Diagnositics/debugging string of the command invoked for 
      *  this process [only present if APR_HAS_PROC_INVOKED is true]
+     * @remark Only enabled on Win32 by default.
+     * @bug This should either always or never be present in release
+     * builds - since it breaks binary compatibility.  We may enable
+     * it always in APR 1.0 yet leave it undefined in most cases.
      */
     char *invoked;
 #endif
 #if defined(WIN32) || defined(DOXYGEN)
-    /** Win32 specific: Must retain the creator's handle granting 
-     *  access, as a new copy may not grant the same permissions 
+    /** (Win32 only) Creator's handle granting access to the process
+     * @remark This handle is closed and reset to NULL in every case
+     * corresponding to a waitpid() on Unix which returns the exit status.
+     * Therefore Win32 correspond's to Unix's zombie reaping characteristics
+     * and avoids potential handle leaks.
      */
     HANDLE hproc;
 #endif
-};
+} apr_proc_t;
+
+/**
+ * The prototype for APR child errfn functions.  (See the description
+ * of apr_procattr_child_errfn_set() for more information.)
+ * It is passed the following parameters:
+ * @param pool Pool associated with the apr_proc_t.  If your child
+ *             error function needs user data, associate it with this
+ *             pool.
+ * @param err APR error code describing the error
+ * @param description Text description of type of processing which failed
+ */
+typedef void (apr_child_errfn_t)(apr_pool_t *proc, apr_status_t err,
+                                 const char *description);
 
 /** Opaque Thread structure. */
 typedef struct apr_thread_t           apr_thread_t;
+
 /** Opaque Thread attributes structure. */
 typedef struct apr_threadattr_t       apr_threadattr_t;
+
 /** Opaque Process attributes structure. */
 typedef struct apr_procattr_t         apr_procattr_t;
+
 /** Opaque control variable for one-time atomic variables.  */
 typedef struct apr_thread_once_t      apr_thread_once_t;
 
 /** Opaque thread private address space. */
 typedef struct apr_threadkey_t        apr_threadkey_t;
-#if APR_HAS_OTHER_CHILD
+
 /** Opaque record of child process. */
 typedef struct apr_other_child_rec_t  apr_other_child_rec_t;
-#endif /* APR_HAS_OTHER_CHILD */
 
 /**
  * The prototype for any APR thread worker functions.
@@ -367,12 +389,6 @@ APR_DECLARE(apr_status_t) apr_threadkey_data_set(void *data, const char *key,
 
 #endif
 
-/* Process Function definitions */
-
-/**
- * @package APR Process library
- */
-
 /**
  * Create and initialize a new procattr variable
  * @param new_attr The newly created procattr. 
@@ -462,7 +478,7 @@ APR_DECLARE(apr_status_t) apr_procattr_cmdtype_set(apr_procattr_t *attr,
                                                   apr_cmdtype_e cmd);
 
 /**
- * Determine if the chlid should start in detached state.
+ * Determine if the child should start in detached state.
  * @param attr The procattr we care about. 
  * @param detach Should the child start in detached state?  Default is no. 
  */
@@ -486,6 +502,35 @@ APR_DECLARE(apr_status_t) apr_procattr_limit_set(apr_procattr_t *attr,
                                                 apr_int32_t what,
                                                 struct rlimit *limit);
 #endif
+
+/**
+ * Specify an error function to be called in the child process if APR
+ * encounters an error in the child prior to running the specified program.
+ * @param attr The procattr describing the child process to be created.
+ * @param errfn The function to call in the child process.
+ * @remark At the present time, it will only be called from apr_proc_create()
+ *         on platforms where fork() is used.  It will never be called on other
+ *         platforms, on those platforms apr_proc_create() will return the error
+ *         in the parent process rather than invoke the callback in the now-forked
+ *         child process.
+ */
+APR_DECLARE(apr_status_t) apr_procattr_child_errfn_set(apr_procattr_t *attr,
+                                                       apr_child_errfn_t *errfn);
+
+/**
+ * Specify that apr_proc_create() should do whatever it can to report
+ * failures to the caller of apr_proc_create(), rather than find out in
+ * the child.
+ * @param attr The procattr describing the child process to be created.
+ * @param chk Flag to indicate whether or not extra work should be done
+ *            to try to report failures to the caller.
+ * @remark This flag only affects apr_proc_create() on platforms where
+ *         fork() is used.  This leads to extra overhead in the calling
+ *         process, but that may help the application handle such
+ *         errors more gracefully.
+ */
+APR_DECLARE(apr_status_t) apr_procattr_error_check_set(apr_procattr_t *attr,
+                                                       apr_int32_t chk);
 
 #if APR_HAS_FORK
 /**
@@ -571,6 +616,8 @@ APR_DECLARE(apr_status_t) apr_proc_wait(apr_proc_t *proc,
  *                          child is dead or not.
  * </PRE>
  * @param p Pool to allocate child information out of.
+ * @bug Passing proc as a *proc rather than **proc was an odd choice
+ * for some platforms... this should be revisited in 1.0
  */
 APR_DECLARE(apr_status_t) apr_proc_wait_all_procs(apr_proc_t *proc,
                                                   int *exitcode,
@@ -589,21 +636,24 @@ APR_DECLARE(apr_status_t) apr_proc_wait_all_procs(apr_proc_t *proc,
  */
 APR_DECLARE(apr_status_t) apr_proc_detach(int daemonize);
 
-#if APR_HAS_OTHER_CHILD
-
 /**
- * Register an other_child -- a child which must be kept track of so 
- * that the program knows when it has died or disappeared.
- * @param pid pid is the pid of the child.
+ * Register an other_child -- a child associated to its registered 
+ * maintence callback.  This callback is invoked when the process
+ * dies, is disconnected or disappears.
+ * @param proc The child process to register.
  * @param maintenance maintenance is a function that is invoked with a 
  *                    reason and the data pointer passed here.
- * @param data The data to pass to the maintenance function.
+ * @param data Opaque context data passed to the maintenance function.
  * @param write_fd An fd that is probed for writing.  If it is ever unwritable
  *                 then the maintenance is invoked with reason 
  *                 OC_REASON_UNWRITABLE.
  * @param p The pool to use for allocating memory.
+ * @bug write_fd duplicates the proc->out stream, it's really redundant
+ * and should be replaced in the APR 1.0 API with a bitflag of which
+ * proc->in/out/err handles should be health checked.
+ * @bug no platform currently tests the pipes health.
  */
-APR_DECLARE(void) apr_proc_other_child_register(apr_proc_t *pid, 
+APR_DECLARE(void) apr_proc_other_child_register(apr_proc_t *proc, 
                                            void (*maintenance) (int reason, 
                                                                 void *, 
                                                                 int status),
@@ -611,7 +661,7 @@ APR_DECLARE(void) apr_proc_other_child_register(apr_proc_t *pid,
                                            apr_pool_t *p);
 
 /**
- * Stop watching the specified process.
+ * Stop watching the specified other child.  
  * @param data The data to pass to the maintenance function.  This is
  *             used to find the process to unregister.
  * @warning Since this can be called by a maintenance function while we're
@@ -622,20 +672,60 @@ APR_DECLARE(void) apr_proc_other_child_register(apr_proc_t *pid,
 APR_DECLARE(void) apr_proc_other_child_unregister(void *data);
 
 /**
- * Check on the specified process.  If it is gone, call the maintenance 
- * function.
- * @param pid The process to check.
- * @param status The status to pass to the maintenance function.
+ * Notify the maintenance callback of a registered other child process
+ * that application has detected an event, such as death.
+ * @param proc The process to check
+ * @param reason The reason code to pass to the maintenance function
+ * @param status The status to pass to the maintenance function
+ * @remark An example of code using this behavior;
+ * <pre>
+ * rv = apr_proc_wait_all_procs(&proc, &exitcode, &status, APR_WAIT, p);
+ * if (APR_STATUS_IS_CHILD_DONE(rv)) {
+ * #if APR_HAS_OTHER_CHILD
+ *     if (apr_proc_other_child_alert(&proc, APR_OC_REASON_DEATH, status)
+ *             == APR_SUCCESS) {
+ *         ;  (already handled)
+ *     }
+ *     else
+ * #endif
+ *         [... handling non-otherchild processes death ...]
+ * </pre>
  */
-APR_DECLARE(apr_status_t) apr_proc_other_child_read(apr_proc_t *pid, int status);
+APR_DECLARE(apr_status_t) apr_proc_other_child_alert(apr_proc_t *proc, 
+                                                     int reason,
+                                                     int status);
 
 /**
- * Loop through all registered other_children and call the appropriate 
- * maintenance function when necessary.
+ * Test one specific other child processes and invoke the maintenance callback 
+ * with the appropriate reason code, if still running, or the appropriate reason 
+ * code if the process is no longer healthy.
+ * @param ocr The registered other child
+ * @param reason The reason code (e.g. APR_OC_REASON_RESTART) if still running
  */
-APR_DECLARE(void) apr_proc_other_child_check(void); 
+APR_DECLARE(void) apr_proc_other_child_refresh(apr_other_child_rec_t *ocr,
+                                               int reason);
 
-#endif /* APR_HAS_OTHER_CHILD */
+/**
+ * Test all registered other child processes and invoke the maintenance callback 
+ * with the appropriate reason code, if still running, or the appropriate reason 
+ * code if the process is no longer healthy.
+ * @param reason The reason code (e.g. APR_OC_REASON_RESTART) to running processes
+ */
+APR_DECLARE(void) apr_proc_other_child_refresh_all(int reason);
+
+/** @deprecated @see apr_proc_other_child_refresh_all
+ * @remark Call apr_proc_other_child_refresh_all(APR_OC_REASON_RESTART)
+ * or apr_proc_other_child_refresh_all(APR_OC_REASON_RUNNING) instead.
+ * @bug The differing implementations of this function on Win32 (_RUNNING checks) 
+ * and Unix (used only for _RESTART) are the reason it will be dropped with APR 1.0.
+ */
+APR_DECLARE(void) apr_proc_other_child_check(void);
+
+/** @deprecated @see apr_proc_other_child_alert
+ * @bug This function's name had nothing to do with it's purpose
+ */
+APR_DECLARE(apr_status_t) apr_proc_other_child_read(apr_proc_t *proc, int status);
+
 
 /** 
  * Terminate a process.
@@ -647,7 +737,7 @@ APR_DECLARE(apr_status_t) apr_proc_kill(apr_proc_t *proc, int sig);
 /**
  * Register a process to be killed when a pool dies.
  * @param a The pool to use to define the processes lifetime 
- * @param pid The process to register
+ * @param proc The process to register
  * @param how How to kill the process, one of:
  * <PRE>
  *         APR_KILL_NEVER         -- process is never sent any signals
@@ -657,7 +747,7 @@ APR_DECLARE(apr_status_t) apr_proc_kill(apr_proc_t *proc, int sig);
  *         APR_KILL_ONLY_ONCE     -- send SIGTERM and then wait
  * </PRE>
  */
-APR_DECLARE(void) apr_pool_note_subprocess(apr_pool_t *a, apr_proc_t *pid,
+APR_DECLARE(void) apr_pool_note_subprocess(apr_pool_t *a, apr_proc_t *proc,
                                            apr_kill_conditions_e how);
 
 #if APR_HAS_THREADS 
@@ -688,7 +778,9 @@ APR_DECLARE(apr_status_t) apr_signal_thread(int(*signal_handler)(int signum));
 APR_POOL_DECLARE_ACCESSOR(thread);
 
 #endif /* APR_HAS_THREADS */
+
 /** @} */
+
 #ifdef __cplusplus
 }
 #endif

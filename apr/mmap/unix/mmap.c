@@ -58,7 +58,7 @@
 #include "apr_strings.h"
 #include "apr_mmap.h"
 #include "apr_errno.h"
-#include "fileio.h"
+#include "apr_arch_file_io.h"
 #include "apr_portable.h"
 
 /* System headers required for the mmap library */
@@ -122,6 +122,9 @@ APR_DECLARE(apr_status_t) apr_mmap_create(apr_mmap_t **new,
     apr_int32_t native_flags = 0;
 #endif
 
+    if (size == 0)
+        return APR_EINVAL;
+    
     if (file == NULL || file->filedes == -1 || file->buffered)
         return APR_EBADF;
     (*new) = (apr_mmap_t *)apr_pcalloc(cont, sizeof(apr_mmap_t));
@@ -160,7 +163,7 @@ APR_DECLARE(apr_status_t) apr_mmap_create(apr_mmap_t **new,
 
     if (mm == (void *)-1) {
         /* we failed to get an mmap'd file... */
-        return APR_ENOMEM;
+        return errno;
     }
 #endif
 

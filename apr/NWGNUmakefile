@@ -236,7 +236,6 @@ FILES_nlm_exports = \
 # Paths must all use the '/' character
 #
 FILES_lib_objs = \
-	$(OBJDIR)/apr_atomic.o \
 	$(OBJDIR)/apr_cpystrn.o \
 	$(OBJDIR)/apr_fnmatch.o \
 	$(OBJDIR)/apr_getpass.o \
@@ -253,9 +252,11 @@ FILES_lib_objs = \
 	$(OBJDIR)/dir.o \
 	$(OBJDIR)/dso.o \
 	$(OBJDIR)/errorcodes.o \
+	$(OBJDIR)/env.o \
 	$(OBJDIR)/fileacc.o \
 	$(OBJDIR)/filedup.o \
 	$(OBJDIR)/filepath.o \
+	$(OBJDIR)/filepath_util.o \
 	$(OBJDIR)/filestat.o \
 	$(OBJDIR)/filesys.o \
 	$(OBJDIR)/flock.o \
@@ -269,6 +270,7 @@ FILES_lib_objs = \
 	$(OBJDIR)/mmap.o \
 	$(OBJDIR)/open.o \
 	$(OBJDIR)/pipe.o \
+	$(OBJDIR)/otherchild.o \
 	$(OBJDIR)/poll.o \
 	$(OBJDIR)/pollacc.o \
 	$(OBJDIR)/proc.o \
@@ -315,10 +317,6 @@ install :: nlms FORCE
 #
 # Any specialized rules here
 #
-
-$(OBJDIR)/%.o: atomic/netware/%.c $(OBJDIR)\cc.opt
-	@echo Compiling $<
-	$(CC) atomic\netware\$(<F) -o=$(OBJDIR)\$(@F) @$(OBJDIR)\cc.opt
 
 $(OBJDIR)/%.o: strings/%.c $(OBJDIR)\cc.opt
 	@echo Compiling $<

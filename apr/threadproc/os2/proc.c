@@ -55,8 +55,8 @@
 #define INCL_DOS
 #define INCL_DOSERRORS
 
-#include "threadproc.h"
-#include "fileio.h"
+#include "apr_arch_threadproc.h"
+#include "apr_arch_file_io.h"
 #include "apr_private.h"
 #include "apr_thread_proc.h"
 #include "apr_file_io.h"
@@ -274,6 +274,24 @@ static char *double_quotes(apr_pool_t *pool, const char *str)
     
     *dest = 0;
     return quote_doubled_str;
+}
+
+
+
+APR_DECLARE(apr_status_t) apr_procattr_child_errfn_set(apr_procattr_t *attr,
+                                                       apr_child_errfn_t *errfn)
+{
+    /* won't ever be called on this platform, so don't save the function pointer */
+    return APR_SUCCESS;
+}
+
+
+
+APR_DECLARE(apr_status_t) apr_procattr_error_check_set(apr_procattr_t *attr,
+                                                       apr_int32_t chk)
+{
+    /* won't ever be used on this platform, so don't save the flag */
+    return APR_SUCCESS;
 }
 
 
@@ -568,9 +586,6 @@ APR_DECLARE(apr_status_t) apr_proc_wait_all_procs(apr_proc_t *proc,
     ULONG rc;
     PID pid;
 
-    if (!proc)
-        return APR_ENOPROC;
-
     rc = DosWaitChild(DCWA_PROCESSTREE, waithow == APR_WAIT ? DCWW_WAIT : DCWW_NOWAIT, &codes, &pid, 0);
 
     if (rc == 0) {
@@ -593,10 +608,6 @@ APR_DECLARE(apr_status_t) apr_proc_wait(apr_proc_t *proc,
     RESULTCODES codes;
     ULONG rc;
     PID pid;
-
-    if (!proc)
-        return APR_ENOPROC;
-
     rc = DosWaitChild(DCWA_PROCESS, waithow == APR_WAIT ? DCWW_WAIT : DCWW_NOWAIT, &codes, &pid, proc->pid);
 
     if (rc == 0) {

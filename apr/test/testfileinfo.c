@@ -62,6 +62,8 @@
 #include "test_apr.h"
 
 #define FILENAME "data/file_datafile.txt"
+#define NEWFILENAME "data/new_datafile.txt"
+#define NEWFILEDATA "This is new text in a new file."
 
 static const struct view_fileinfo
 {
@@ -207,6 +209,36 @@ static void test_stat_eq_finfo(CuTest *tc)
     finfo_equal(tc, stat_finfo, finfo);
 }
 
+static void test_buffered_write_size(CuTest *tc)
+{
+    const apr_size_t data_len = strlen(NEWFILEDATA);
+    apr_file_t *thefile;
+    apr_finfo_t finfo;
+    apr_status_t rv;
+    apr_size_t bytes;
+
+    rv = apr_file_open(&thefile, NEWFILENAME,
+                       APR_READ | APR_WRITE | APR_CREATE | APR_TRUNCATE
+                       | APR_BUFFERED | APR_DELONCLOSE,
+                       APR_OS_DEFAULT, p);
+    apr_assert_success(tc, "open file", rv);
+
+    /* A funny thing happened to me the other day: I wrote something
+     * into a buffered file, then asked for its size using
+     * apr_file_info_get; and guess what? The size was 0! That's not a
+     * nice way to behave.
+     */
+    bytes = data_len;
+    rv = apr_file_write(thefile, NEWFILEDATA, &bytes);
+    apr_assert_success(tc, "write file contents", rv);
+    CuAssertTrue(tc, data_len == bytes);
+
+    rv = apr_file_info_get(&finfo, APR_FINFO_SIZE, thefile);
+    apr_assert_success(tc, "get file size", rv);
+    CuAssertTrue(tc, bytes == (apr_size_t) finfo.size);
+    apr_file_close(thefile);
+}
+
 CuSuite *testfileinfo(void)
 {
     CuSuite *suite = CuSuiteNew("File Info");
@@ -214,6 +246,7 @@ CuSuite *testfileinfo(void)
     SUITE_ADD_TEST(suite, test_info_get);
     SUITE_ADD_TEST(suite, test_stat);
     SUITE_ADD_TEST(suite, test_stat_eq_finfo);
+    SUITE_ADD_TEST(suite, test_buffered_write_size);
 
     return suite;
 }

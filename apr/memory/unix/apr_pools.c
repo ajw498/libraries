@@ -439,7 +439,7 @@ typedef struct cleanup_t cleanup_t;
 /** A list of processes */
 struct process_chain {
     /** The process ID */
-    apr_proc_t *pid;
+    apr_proc_t *proc;
     apr_kill_conditions_e kill_how;
     /** The next process in the list */
     struct process_chain *next;
@@ -1219,9 +1219,10 @@ static void apr_pool_check_integrity(apr_pool_t *pool)
      */
 #if (APR_POOL_DEBUG & APR_POOL_DEBUG_LIFETIME)
     if (!apr_pool_is_child_of(pool, global_pool)) {
+#if (APR_POOL_DEBUG & APR_POOL_DEBUG_VERBOSE_ALL)
         apr_pool_log_event(pool, "LIFE",
                            __FILE__ ":apr_pool_integrity check", 0);
-
+#endif /* (APR_POOL_DEBUG & APR_POOL_DEBUG_VERBOSE_ALL) */
         abort();
     }
 #endif /* (APR_POOL_DEBUG & APR_POOL_DEBUG_LIFETIME) */
@@ -1229,8 +1230,10 @@ static void apr_pool_check_integrity(apr_pool_t *pool)
 #if (APR_POOL_DEBUG & APR_POOL_DEBUG_OWNER)
 #if APR_HAS_THREADS
     if (!apr_os_thread_equal(pool->owner, apr_os_thread_current())) {
+#if (APR_POOL_DEBUG & APR_POOL_DEBUG_VERBOSE_ALL)
         apr_pool_log_event(pool, "THREAD",
                            __FILE__ ":apr_pool_integrity check", 0);
+#endif /* (APR_POOL_DEBUG & APR_POOL_DEBUG_VERBOSE_ALL) */
         abort();
     }
 #endif /* APR_HAS_THREADS */
@@ -2026,12 +2029,12 @@ APR_DECLARE_NONSTD(apr_status_t) apr_pool_cleanup_null(void *data)
  * we might want to fold support for that into the generic interface.
  * For now, it's a special case.
  */
-APR_DECLARE(void) apr_pool_note_subprocess(apr_pool_t *pool, apr_proc_t *pid,
+APR_DECLARE(void) apr_pool_note_subprocess(apr_pool_t *pool, apr_proc_t *proc,
                                            apr_kill_conditions_e how)
 {
     struct process_chain *pc = apr_palloc(pool, sizeof(struct process_chain));
 
-    pc->pid = pid;
+    pc->proc = proc;
     pc->kill_how = how;
     pc->next = pool->subprocesses;
     pool->subprocesses = pc;
@@ -2060,12 +2063,13 @@ static void free_proc_chain(struct process_chain *procs)
 #ifndef NEED_WAITPID
     /* Pick up all defunct processes */
     for (pc = procs; pc; pc = pc->next) {
-        if (apr_proc_wait(pc->pid, NULL, NULL, APR_NOWAIT) != APR_CHILD_NOTDONE)
+        if (apr_proc_wait(pc->proc, NULL, NULL, APR_NOWAIT) != APR_CHILD_NOTDONE)
             pc->kill_how = APR_KILL_NEVER;
     }
 #endif /* !defined(NEED_WAITPID) */
 
     for (pc = procs; pc; pc = pc->next) {
+#ifndef WIN32
         if ((pc->kill_how == APR_KILL_AFTER_TIMEOUT)
             || (pc->kill_how == APR_KILL_ONLY_ONCE)) {
             /*
@@ -2074,15 +2078,16 @@ static void free_proc_chain(struct process_chain *procs)
              * similar to a SIGKILL, so always give the process a timeout
              * under Windows before killing it.
              */
-#ifdef WIN32
-            need_timeout = 1;
-#else /* !defined(WIN32) */
-            if (apr_proc_kill(pc->pid, SIGTERM) == APR_SUCCESS)
+            if (apr_proc_kill(pc->proc, SIGTERM) == APR_SUCCESS)
                 need_timeout = 1;
-#endif /* !defined(WIN32) */
         }
         else if (pc->kill_how == APR_KILL_ALWAYS) {
-            apr_proc_kill(pc->pid, SIGKILL);
+#else /* WIN32 knows only one fast, clean method of killing processes today */
+        if (pc->kill_how != APR_KILL_NEVER) {
+            need_timeout = 1;
+            pc->kill_how = APR_KILL_ALWAYS;
+#endif
+            apr_proc_kill(pc->proc, SIGKILL);
         }
     }
 
@@ -2099,7 +2104,8 @@ static void free_proc_chain(struct process_chain *procs)
             need_timeout = 0;
             for (pc = procs; pc; pc = pc->next) {
                 if (pc->kill_how == APR_KILL_AFTER_TIMEOUT) {
-                    if (apr_proc_wait(pc->pid, NULL, NULL, APR_NOWAIT) == APR_CHILD_NOTDONE)
+                    if (apr_proc_wait(pc->proc, NULL, NULL, APR_NOWAIT)
+                            == APR_CHILD_NOTDONE)
                         need_timeout = 1;		/* subprocess is still active */
                     else
                         pc->kill_how = APR_KILL_NEVER;	/* subprocess has exited */
@@ -2121,31 +2127,14 @@ static void free_proc_chain(struct process_chain *procs)
      */
     for (pc = procs; pc; pc = pc->next) {
         if (pc->kill_how == APR_KILL_AFTER_TIMEOUT)
-            apr_proc_kill(pc->pid, SIGKILL);
+            apr_proc_kill(pc->proc, SIGKILL);
     }
 
     /* Now wait for all the signaled processes to die */
     for (pc = procs; pc; pc = pc->next) {
         if (pc->kill_how != APR_KILL_NEVER)
-            (void)apr_proc_wait(pc->pid, NULL, NULL, APR_WAIT);
+            (void)apr_proc_wait(pc->proc, NULL, NULL, APR_WAIT);
     }
-
-#ifdef WIN32
-    /*
-     * XXX: Do we need an APR function to clean-up a proc_t?
-     * Well ... yeah ... but we can't since it's scope is ill defined.
-     * We can't dismiss the handle until the apr_proc_wait above is
-     * finished with the proc_t.
-     */
-    {
-        for (pc = procs; pc; pc = pc->next) {
-            if (pc->pid->hproc) {
-                CloseHandle(pc->pid->hproc);
-                pc->pid->hproc = NULL;
-            }
-        }
-    }
-#endif /* defined(WIN32) */
 }
 
 

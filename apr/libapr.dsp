@@ -43,7 +43,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MD /W3 /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /FD /c
-# ADD CPP /nologo /MD /W3 /O2 /I "./include" /I "./include/arch" /I "./include/arch/win32" /I "./include/arch/unix" /D "NDEBUG" /D "APR_DECLARE_EXPORT" /D "WIN32" /D "_WINDOWS" /Fd"Release\apr" /FD /c
+# ADD CPP /nologo /MD /W3 /Zi /O2 /I "./include" /I "./include/arch" /I "./include/arch/win32" /I "./include/arch/unix" /D "NDEBUG" /D "APR_DECLARE_EXPORT" /D "WIN32" /D "_WINDOWS" /Fd"Release\libapr_src" /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /o /win32 "NUL"
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /o /win32 "NUL"
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
@@ -52,8 +52,8 @@ BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
-# ADD BASE LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib shell32.lib /nologo /base:"0x6EEC0000" /subsystem:windows /dll /map /machine:I386 /OPT:NOREF
-# ADD LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib shell32.lib rpcrt4.lib /nologo /base:"0x6EEC0000" /subsystem:windows /dll /map /machine:I386 /OPT:NOREF
+# ADD BASE LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib shell32.lib rpcrt4.lib /nologo /base:"0x6EEC0000" /subsystem:windows /dll /incremental:no /debug /machine:I386 /opt:ref
+# ADD LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib shell32.lib rpcrt4.lib /nologo /base:"0x6EEC0000" /subsystem:windows /dll /incremental:no /debug /machine:I386 /opt:ref
 
 !ELSEIF  "$(CFG)" == "libapr - Win32 Debug"
 
@@ -69,7 +69,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /FD /c
-# ADD CPP /nologo /MDd /W3 /GX /Zi /Od /I "./include" /I "./include/arch" /I "./include/arch/win32" /I "./include/arch/unix" /D "_DEBUG" /D "APR_DECLARE_EXPORT" /D "WIN32" /D "_WINDOWS" /Fd"Debug\apr" /FD /c
+# ADD CPP /nologo /MDd /W3 /GX /Zi /Od /I "./include" /I "./include/arch" /I "./include/arch/win32" /I "./include/arch/unix" /D "_DEBUG" /D "APR_DECLARE_EXPORT" /D "WIN32" /D "_WINDOWS" /Fd"Debug\libapr_src" /FD /c
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /o /win32 "NUL"
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /o /win32 "NUL"
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
@@ -78,8 +78,8 @@ BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
-# ADD BASE LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib shell32.lib /nologo /base:"0x6EEC0000" /subsystem:windows /dll /incremental:no /map /debug /machine:I386 /OPT:NOREF
-# ADD LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib shell32.lib rpcrt4.lib /nologo /base:"0x6EEC0000" /subsystem:windows /dll /incremental:no /map /debug /machine:I386 /OPT:NOREF
+# ADD BASE LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib shell32.lib rpcrt4.lib /nologo /base:"0x6EEC0000" /subsystem:windows /dll /incremental:no /debug /machine:I386
+# ADD LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib shell32.lib rpcrt4.lib /nologo /base:"0x6EEC0000" /subsystem:windows /dll /incremental:no /debug /machine:I386
 
 !ENDIF 
 
@@ -120,6 +120,10 @@ SOURCE=.\file_io\win32\filedup.c
 # Begin Source File
 
 SOURCE=.\file_io\win32\filepath.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\file_io\unix\filepath_util.c
 # End Source File
 # Begin Source File
 
@@ -200,6 +204,10 @@ SOURCE=.\misc\win32\charset.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\misc\win32\env.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\misc\unix\errorcodes.c
 # End Source File
 # Begin Source File
@@ -260,11 +268,11 @@ SOURCE=.\network_io\unix\inet_pton.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\poll\unix\pollacc.c
+SOURCE=.\poll\unix\poll.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\poll\unix\poll.c
+SOURCE=.\poll\unix\pollacc.c
 # End Source File
 # Begin Source File
 
@@ -393,47 +401,51 @@ SOURCE=.\user\win32\userinfo.c
 # PROP Default_Filter ""
 # Begin Source File
 
+SOURCE=.\include\arch\win32\apr_arch_atime.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\include\arch\win32\apr_arch_dso.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\include\arch\win32\apr_arch_file_io.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\include\arch\win32\apr_arch_inherit.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\include\arch\win32\apr_arch_misc.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\include\arch\win32\apr_arch_networkio.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\include\arch\win32\apr_arch_thread_mutex.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\include\arch\win32\apr_arch_thread_rwlock.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\include\arch\win32\apr_arch_threadproc.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\include\arch\win32\apr_arch_utf8.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\include\arch\win32\apr_private.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\include\arch\win32\atime.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\include\arch\win32\dso.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\include\arch\win32\fileio.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\include\arch\win32\inherit.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\include\arch\win32\misc.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\include\arch\win32\networkio.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\include\arch\win32\thread_mutex.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\include\arch\win32\thread_rwlock.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\include\arch\win32\threadproc.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\include\arch\win32\utf8.h
+SOURCE=.\include\arch\apr_private_common.h
 # End Source File
 # End Group
 # Begin Group "Public Header Files"
@@ -455,26 +467,34 @@ SOURCE=.\include\apr.hw
 
 !IF  "$(CFG)" == "libapr - Win32 Release"
 
-# Begin Custom Build - Creating apr.h from apr.hw 
+# Begin Custom Build - Creating apr.h from apr.hw
 InputPath=.\include\apr.hw
 
 ".\include\apr.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
 	type .\include\apr.hw > .\include\apr.h
-	
+
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "libapr - Win32 Debug"
 
-# Begin Custom Build - Creating apr.h from apr.hw 
+# Begin Custom Build - Creating apr.h from apr.hw
 InputPath=.\include\apr.hw
 
 ".\include\apr.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
 	type .\include\apr.hw > .\include\apr.h
-	
+
 # End Custom Build
 
 !ENDIF 
 
+# End Source File
+# Begin Source File
+
+SOURCE=.\include\apr_allocator.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\include\apr_atomic.h
 # End Source File
 # Begin Source File
 
@@ -483,6 +503,10 @@ SOURCE=.\include\apr_compat.h
 # Begin Source File
 
 SOURCE=.\include\apr_dso.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\include\apr_env.h
 # End Source File
 # Begin Source File
 
@@ -534,6 +558,10 @@ SOURCE=.\include\apr_network_io.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\include\apr_poll.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\include\apr_pools.h
 # End Source File
 # Begin Source File
@@ -559,6 +587,10 @@ SOURCE=.\include\apr_signal.h
 # Begin Source File
 
 SOURCE=.\include\apr_strings.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\include\apr_support.h
 # End Source File
 # Begin Source File
 
@@ -590,6 +622,10 @@ SOURCE=.\include\apr_user.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\include\apr_version.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\include\apr_want.h
 # End Source File
 # End Group
@@ -608,7 +644,7 @@ SOURCE=.\build\win32ver.awk
 InputPath=.\build\win32ver.awk
 
 ".\libapr.rc" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	awk -f ./build/win32ver.awk libapr "Apache Portability Runtime Library"  ../../include/ap_release.h > .\libapr.rc
+	awk -f ./build/win32ver.awk libapr.dll "Apache Portability Runtime Library"  ../../include/ap_release.h > .\libapr.rc
 
 # End Custom Build
 
@@ -619,7 +655,7 @@ InputPath=.\build\win32ver.awk
 InputPath=.\build\win32ver.awk
 
 ".\libapr.rc" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	awk -f ./build/win32ver.awk libapr "Apache Portability Runtime Library"  ../../include/ap_release.h > .\libapr.rc
+	awk -f ./build/win32ver.awk libapr.dll "Apache Portability Runtime Library"  ../../include/ap_release.h > .\libapr.rc
 
 # End Custom Build
 

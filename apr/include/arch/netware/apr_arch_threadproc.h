@@ -52,24 +52,64 @@
  * <http://www.apache.org/>.
  */
 
-#ifndef GLOBAL_MUTEX_H
-#define GLOBAL_MUTEX_H
-
 #include "apr.h"
-#include "apr_private.h"
-#include "apr_general.h"
-#include "apr_lib.h"
-#include "apr_global_mutex.h"
-#include "proc_mutex.h"
-#include "thread_mutex.h"
+#include "apr_thread_proc.h"
+#include "apr_file_io.h"
 
-struct apr_global_mutex_t {
+#include <sys/wait.h>
+
+#ifndef THREAD_PROC_H
+#define THREAD_PROC_H
+
+#define SHELL_PATH ""
+#define APR_DEFAULT_STACK_SIZE 65536
+
+struct apr_thread_t {
     apr_pool_t *pool;
-    apr_proc_mutex_t *proc_mutex;
-#if APR_HAS_THREADS
-    apr_thread_mutex_t *thread_mutex;
-#endif /* APR_HAS_THREADS */
+    NXContext_t ctx;
+    NXThreadId_t td;
+    char *thread_name;
+    apr_int32_t cancel;
+    apr_int32_t cancel_how;
+    void *data;
+    apr_thread_start_t func;
+    apr_status_t exitval;
 };
 
-#endif  /* GLOBAL_MUTEX_H */
+struct apr_threadattr_t {
+    apr_pool_t *pool;
+    apr_size_t  stack_size;
+    apr_int32_t detach;
+    char *thread_name;
+};
+
+struct apr_threadkey_t {
+    apr_pool_t *pool;
+    NXKey_t key;
+};
+
+struct apr_procattr_t {
+    apr_pool_t *pool;
+    apr_file_t *parent_in;
+    apr_file_t *child_in;
+    apr_file_t *parent_out;
+    apr_file_t *child_out;
+    apr_file_t *parent_err;
+    apr_file_t *child_err;
+    char *currdir;
+    apr_int32_t cmdtype;
+    apr_int32_t detached;
+};
+
+struct apr_thread_once_t {
+    unsigned long value;
+};
+
+//struct apr_proc_t {
+//    apr_pool_t *pool;
+//    pid_t pid;
+//    apr_procattr_t *attr;
+//};
+
+#endif  /* ! THREAD_PROC_H */
 
