@@ -1,0 +1,220 @@
+#!/bin/sh
+# ====================================================================
+# The Apache Software License, Version 1.1
+#
+# Copyright (c) 2001-2002 The Apache Software Foundation.  All rights
+# reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with the
+#    distribution.
+#
+# 3. The end-user documentation included with the redistribution,
+#    if any, must include the following acknowledgment:
+#       "This product includes software developed by the
+#        Apache Software Foundation (http://www.apache.org/)."
+#    Alternately, this acknowledgment may appear in the software itself,
+#    if and wherever such third-party acknowledgments normally appear.
+#
+# 4. The names "Apache" and "Apache Software Foundation" must
+#    not be used to endorse or promote products derived from this
+#    software without prior written permission. For written
+#    permission, please contact apache@apache.org.
+#
+# 5. Products derived from this software may not be called "Apache",
+#    nor may "Apache" appear in their name, without prior written
+#    permission of the Apache Software Foundation.
+#
+# THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+# OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED.  IN NO EVENT SHALL THE APACHE SOFTWARE FOUNDATION OR
+# ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+# USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+# OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
+# ====================================================================
+#
+# This software consists of voluntary contributions made by many
+# individuals on behalf of the Apache Software Foundation.  For more
+# information on the Apache Software Foundation, please see
+# <http://www.apache.org/>.
+
+# APR-util script designed to allow easy command line access to APR-util
+# configuration parameters.
+
+prefix="@prefix@"
+exec_prefix="@exec_prefix@"
+bindir="@bindir@"
+libdir="@libdir@"
+includedir="@includedir@"
+
+LIBS="@APRUTIL_EXPORT_LIBS@"
+INCLUDES="@APRUTIL_INCLUDES@"
+LDFLAGS="@APRUTIL_LDFLAGS@"
+
+APU_SOURCE_DIR="@top_srcdir@"
+APU_BUILD_DIR="@top_builddir@"
+APR_XML_EXPAT_OLD="@APR_XML_EXPAT_OLD@"
+
+show_usage()
+{
+    cat << EOF
+Usage: apu-config [OPTION]
+
+Known values for OPTION are:
+  --prefix[=DIR]    change prefix to DIR
+  --includes        print include information
+  --ldflags         print linker flags
+  --libs            print library information
+  --srcdir          print APR-util source directory
+  --link-ld         print link switch(es) for linking to APR-util
+  --link-libtool    print the libtool inputs for linking to APR-util
+  --apu-la-file     print the path to the .la file, if available
+  --old-expat       indicate if APR-util was built against an old expat
+  --help            print this help
+
+When linking with libtool, an application should do something like:
+  APU_LIBS="\`apu-config --link-libtool --libs\`"
+or when linking directly:
+  APU_LIBS="\`apu-config --link-ld --libs\`"
+
+An application should use the results of --includes, and --ldflags in
+their build process.
+EOF
+}
+
+if test $# -eq 0; then
+    show_usage
+    exit 1
+fi
+
+thisdir="`dirname $0`"
+thisdir="`cd $thisdir && pwd`"
+if test -d $bindir; then
+  tmpbindir="`cd $bindir && pwd`"
+else
+  tmpbindir=""
+fi
+if test "$tmpbindir" = "$thisdir"; then
+  location=installed
+elif test "$APU_SOURCE_DIR" = "$thisdir"; then
+  location=source
+else
+  location=build
+fi
+
+if test "$location" = "installed"; then
+    LA_FILE="$libdir/libaprutil.la"
+else
+    LA_FILE="$thisdir/libaprutil.la"
+fi
+
+flags=""
+
+while test $# -gt 0; do
+    # Normalize the prefix.
+    case "$1" in
+    -*=*) optarg=`echo "$1" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
+    *) optarg= ;;
+    esac
+
+    case "$1" in
+    # It is possible for the user to override our prefix.
+    --prefix=*)
+    prefix=$optarg
+    ;;
+    --prefix)
+    echo $prefix
+    exit 0
+    ;;
+    --libs)
+    if test "$location" = "installed" && test -f $PREFIX/lib/libexpat.la; then
+      TMP_BUILDDIR=`echo "$APU_BUILD_DIR/xml/expat" | sed 's/\\//\\\\\\//g'`
+      TMP_PREFIX=`echo $prefix | sed 's/\\//\\\\\\//g'`
+      LIBS=`echo "$LIBS" | sed "s/$TMP_BUILDDIR/$TMP_PREFIX/g"`
+    fi
+    flags="$flags $LIBS"
+    ;;
+    --includes)
+    if test "$location" = "installed"; then
+        flags="$flags -I$includedir $INCLUDES"
+    elif test "$location" = "source"; then
+        flags="$flags -I$APU_SOURCE_DIR/include $INCLUDES"
+    else
+        flags="$flags -I$thisdir/include -I$APU_SOURCE_DIR/include $INCLUDES"
+    fi
+    ;;
+    --ldflags)
+    flags="$flags $LDFLAGS"
+    ;;
+    --srcdir)
+    echo $APU_SOURCE_DIR
+    exit 0
+    ;;
+    --link-ld)
+    if test "$location" = "installed"; then
+        ### avoid using -L if libdir is a "standard" location like /usr/lib
+        flags="$flags -L$libdir -laprutil"
+    else
+        flags="$flags -L$thisdir -laprutil"
+    fi
+    ;;
+    --link-libtool)
+    # If the LA_FILE exists where we think it should be, use it.  If we're
+    # installed and the LA_FILE does not exist, assume to use -L/-l
+    # (the LA_FILE may not have been installed).  If we're building ourselves,
+    # we'll assume that at some point the .la file be created.
+    if test -f "$LA_FILE"; then
+        flags="$flags $LA_FILE"
+    elif test "$location" = "installed"; then
+        ### avoid using -L if libdir is a "standard" location like /usr/lib
+        flags="$flags -L$libdir -laprutil"
+    else
+        flags="$flags $LA_FILE"
+    fi
+    ;;
+    --apu-la-file)
+    if test -f "$LA_FILE"; then
+        flags="$flags $LA_FILE"
+    fi
+    ;;
+    --old-expat)
+    if test ! -n "$APR_XML_EXPAT_OLD"; then
+        echo "no"
+    else
+        echo "$APR_XML_EXPAT_OLD"
+    fi
+    exit 0
+    ;;
+    --help)
+    show_usage
+    exit 0
+    ;;
+    *)
+    show_usage
+    exit 1
+    ;;
+    esac
+
+    # Next please.
+    shift
+done
+
+if test -n "$flags"; then
+  echo "$flags"
+fi
+
+exit 0

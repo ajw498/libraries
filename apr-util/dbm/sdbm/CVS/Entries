@@ -1,0 +1,10 @@
+/.cvsignore/1.1/Mon Aug  5 22:02:36 2002//
+/Makefile.in/1.9/Mon Aug  5 22:02:36 2002//
+/sdbm.c/1.25/Mon Aug  5 22:02:36 2002//
+/sdbm_hash.c/1.5/Mon Aug  5 22:02:36 2002//
+/sdbm_lock.c/1.8/Mon Aug  5 22:02:36 2002//
+/sdbm_pair.c/1.5/Mon Aug  5 22:02:36 2002//
+/sdbm_pair.h/1.4/Mon Aug  5 22:02:36 2002//
+/sdbm_private.h/1.9/Mon Aug  5 22:02:36 2002//
+/sdbm_tune.h/1.4/Mon Aug  5 22:02:36 2002//
+D

@@ -1,7 +1,5 @@
 #!/bin/sh
 
-#DIRS=zlib-1.1.4 jpeg-6b libpng gd regex libiconv-1.8 expat-1.95.4 Sablot-0.95
-
 OPENSSL=openssl-0.9.6g
 NEON=neon-0.22.0
 EXPAT=expat-1.95.4
@@ -61,7 +59,16 @@ ac_cv_working_getnameinfo=${ac_cv_working_getnameinfo=no}
 ac_cv_working_getaddrinfo=${ac_cv_working_getaddrinfo=no}
 EOF
 
-(cd $APR; \
-./configure --host=arm-riscos-aof --prefix=$PREFIX -C \
-&& make clean && make && make install) || exit 1
+#(cd $APR; \
+#./configure --host=arm-riscos-aof --prefix=$PREFIX -C \
+#&& make clean && make && make install) || exit 1
 
+(cd $APRUTIL; \
+./configure --host=arm-riscos-aof --prefix=$PREFIX \
+--with-expat=$PREFIX --with-apr=../apr && \
+make clean && \
+touch uri/gen_uri_delims && \
+touch uri/gen_uri_delims.lo && \
+cp uri/uri_delims.h.pregen uri/uri_delims.h && \
+touch uri/uri_delims.h && \
+make && make install) || exit 1

@@ -1,0 +1,65 @@
+VPATH = @srcdir@
+
+INCLUDES = @APRUTIL_PRIV_INCLUDES@ @APR_INCLUDES@ @APRUTIL_INCLUDES@
+
+PROGRAMS = testdbm testdate testmd4 testmd5 testxml testrmm teststrmatch \
+	testuuid testreslist testqueue
+TARGETS = $(PROGRAMS)
+
+# bring in rules.mk for standard functionality
+@INCLUDE_RULES@
+PROGRAM_DEPENDENCIES = @APRUTIL_LDFLAGS@ @APRUTIL_LIBS@
+
+test: $(PROGRAMS)
+
+testdbm_OBJECTS = testdbm.lo
+testdbm_LDADD =  ../libaprutil.la
+testdbm: $(testdbm_OBJECTS) $(testdbm_LDADD)
+	$(LINK) $(testdbm_OBJECTS) $(testdbm_LDADD) $(PROGRAM_DEPENDENCIES)
+
+testdate_OBJECTS = testdate.lo
+testdate_LDADD =  ../libaprutil.la
+testdate: $(testdate_OBJECTS) $(testdate_LDADD)
+	$(LINK) $(testdate_OBJECTS) $(testdate_LDADD) $(PROGRAM_DEPENDENCIES)
+
+testxml_OBJECTS = testxml.lo
+testxml_LDADD =  ../libaprutil.la
+testxml: $(testxml_OBJECTS) $(testxml_LDADD)
+	$(LINK) $(testxml_OBJECTS) $(testxml_LDADD) $(PROGRAM_DEPENDENCIES)
+
+testmd4_OBJECTS = testmd4.lo
+testmd4_LDADD =  ../libaprutil.la
+testmd4: $(testmd4_OBJECTS) $(testmd4_LDADD)
+	$(LINK) $(testmd4_OBJECTS) $(testmd4_LDADD) $(PROGRAM_DEPENDENCIES)
+
+testmd5_OBJECTS = testmd5.lo
+testmd5_LDADD =  ../libaprutil.la
+testmd5: $(testmd5_OBJECTS) $(testmd5_LDADD)
+	$(LINK) $(testmd5_OBJECTS) $(testmd5_LDADD) $(PROGRAM_DEPENDENCIES)
+
+testrmm_OBJECTS = testrmm.lo
+testrmm_LDADD =  ../libaprutil.la
+testrmm: $(testrmm_OBJECTS) $(testrmm_LDADD)
+	$(LINK) $(testrmm_OBJECTS) $(testrmm_LDADD) $(PROGRAM_DEPENDENCIES)
+
+teststrmatch_OBJECTS = teststrmatch.lo
+teststrmatch_LDADD =  ../libaprutil.la
+teststrmatch: $(teststrmatch_OBJECTS) $(teststrmatch_LDADD)
+	$(LINK) $(teststrmatch_OBJECTS) $(teststrmatch_LDADD) $(PROGRAM_DEPENDENCIES)
+
+testuuid_OBJECTS = testuuid.lo
+testuuid_LDADD =  ../libaprutil.la
+testuuid: $(testuuid_OBJECTS) $(testuuid_LDADD)
+	$(LINK) $(testuuid_OBJECTS) $(testuuid_LDADD) $(PROGRAM_DEPENDENCIES)
+
+testreslist_OBJECTS = testreslist.lo
+testreslist_LDADD =  ../libaprutil.la
+testreslist: $(testreslist_OBJECTS) $(testreslist_LDADD)
+	$(LINK) $(testreslist_OBJECTS) $(testreslist_LDADD) $(PROGRAM_DEPENDENCIES)
+
+testqueue_OBJECTS = testqueue.lo
+testqueue_LDADD =  ../libaprutil.la
+testqueue: $(testqueue_OBJECTS) $(testqueue_LDADD)
+	$(LINK) $(testqueue_OBJECTS) $(testqueue_LDADD) $(PROGRAM_DEPENDENCIES)
+
+

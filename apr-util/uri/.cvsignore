@@ -1,0 +1,16 @@
+Makefile
+gen_uri_delims
+*.lo
+*.la
+.libs
+Debug
+Release
+uri_delims.h
+*.plg
+*.dep
+*.mak
+BuildLog.htm
+*.stc
+*.stt
+*.sto
+*.vcproj
