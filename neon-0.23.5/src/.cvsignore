@@ -1,0 +1,12 @@
+*.lo
+.libs
+Makefile
+libneon.la
+libneon.a
+neon_config.h
+*.diff
+c++.c
+checkincl.c
+*.*.*
+*.out
+*log
