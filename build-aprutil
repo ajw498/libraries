@@ -15,8 +15,10 @@ fi
 --with-expat=$PREFIX --with-apr=$APR \
 --without-berkeley-db && \
 make clean && \
-touch uri/gen_uri_delims && \
+touch uri/gen_uri_delims.o && \
 touch uri/gen_uri_delims.lo && \
+sleep 1 && \
+touch uri/gen_uri_delims && \
 cp uri/uri_delims.h.pregen uri/uri_delims.h && \
 touch uri/uri_delims.h && \
 make && make install) || exit 1
