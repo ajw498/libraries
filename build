@@ -89,11 +89,13 @@ ac_cv_sctp=\${ac_cv_sctp=no}
 EOF
 
 (cd $APR; \
-./configure --host=arm-riscos-aof --prefix=$PREFIX -C \
+AUTOCONF=autoconf2.50 ./buildconf \
+&& ./configure --host=arm-riscos-aof --prefix=$PREFIX -C \
 && make clean && make && make install) || exit 1
 
 (cd $APRUTIL; \
-./configure --host=arm-riscos-aof --prefix=$PREFIX \
+AUTOCONF=autoconf2.50 ./buildconf \
+&& ./configure --host=arm-riscos-aof --prefix=$PREFIX \
 --with-expat=$PREFIX --with-apr=../apr && \
 make clean && \
 touch uri/gen_uri_delims && \
