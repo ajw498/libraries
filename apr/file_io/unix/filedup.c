@@ -64,28 +64,25 @@ static apr_status_t _file_dup(apr_file_t **new_file,
 {
     int rv;
     
-    if ((*new_file) == NULL) {
-        if (which_dup == 1) {
-            (*new_file) = (apr_file_t *)apr_pcalloc(p, sizeof(apr_file_t));
-            if ((*new_file) == NULL) {
-                return APR_ENOMEM;
-            }
-            (*new_file)->pool = p;
-        } else {
+    if (which_dup == 2) {
+        if ((*new_file) == NULL) {
             /* We can't dup2 unless we have a valid new_file */
             return APR_EINVAL;
         }
-    }
-
-    if (which_dup == 2) {
         rv = dup2(old_file->filedes, (*new_file)->filedes);
     } else {
-        rv = ((*new_file)->filedes = dup(old_file->filedes)); 
+        rv = dup(old_file->filedes);
     }
 
     if (rv == -1)
         return errno;
     
+    if (which_dup == 1) {
+        (*new_file) = (apr_file_t *)apr_pcalloc(p, sizeof(apr_file_t));
+        (*new_file)->pool = p;
+        (*new_file)->filedes = rv;
+    }
+
     (*new_file)->fname = apr_pstrdup(p, old_file->fname);
     (*new_file)->buffered = old_file->buffered;
 
@@ -112,10 +109,27 @@ static apr_status_t _file_dup(apr_file_t **new_file,
     /* make sure unget behavior is consistent */
     (*new_file)->ungetchar = old_file->ungetchar;
 
-    /* apr_file_dup() clears the inherit attribute, user must call 
-     * apr_file_inherit_set() again on the dupped handle, as necessary.
+    /* apr_file_dup2() retains the original cleanup, reflecting 
+     * the existing inherit and nocleanup flags.  This means, 
+     * that apr_file_dup2() cannot be called against an apr_file_t
+     * already closed with apr_file_close, because the expected
+     * cleanup was already killed.
      */
-    (*new_file)->flags = old_file->flags & ~APR_INHERIT;
+    if (which_dup == 2) {
+        return APR_SUCCESS;
+    }
+
+    /* apr_file_dup() retains all old_file flags with the exceptions
+     * of APR_INHERIT and APR_FILE_NOCLEANUP.
+     * The user must call apr_file_inherit_set() on the dupped 
+     * apr_file_t when desired.
+     */
+    (*new_file)->flags = old_file->flags
+                       & ~(APR_INHERIT | APR_FILE_NOCLEANUP);
+
+    apr_pool_cleanup_register((*new_file)->pool, (void *)(*new_file),
+                              apr_unix_file_cleanup, 
+                              apr_unix_file_cleanup);
 
     return APR_SUCCESS;
 }
@@ -123,29 +137,13 @@ static apr_status_t _file_dup(apr_file_t **new_file,
 APR_DECLARE(apr_status_t) apr_file_dup(apr_file_t **new_file,
                                        apr_file_t *old_file, apr_pool_t *p)
 {
-    apr_status_t rv;
-
-    rv = _file_dup(new_file, old_file, p, 1);
-    if (rv != APR_SUCCESS)
-        return rv;
-
-    /* we do this here as we don't want to double register an existing 
-     * apr_file_t for cleanup
-     */
-    apr_pool_cleanup_register((*new_file)->pool, (void *)(*new_file),
-                              apr_unix_file_cleanup, apr_unix_file_cleanup);
-    return rv;
-
+    return _file_dup(new_file, old_file, p, 1);
 }
 
 APR_DECLARE(apr_status_t) apr_file_dup2(apr_file_t *new_file,
                                         apr_file_t *old_file, apr_pool_t *p)
 {
-#ifdef NETWARE
-    return _file_dup(&new_file, old_file, p, 1);
-#else
     return _file_dup(&new_file, old_file, p, 2);
-#endif
 }
 
 APR_DECLARE(apr_status_t) apr_file_setaside(apr_file_t **new_file,
@@ -177,7 +175,9 @@ APR_DECLARE(apr_status_t) apr_file_setaside(apr_file_t **new_file,
     if (!(old_file->flags & APR_FILE_NOCLEANUP)) {
         apr_pool_cleanup_register(p, (void *)(*new_file), 
                                   apr_unix_file_cleanup,
-                                  apr_unix_file_cleanup);
+                                  ((*new_file)->flags & APR_INHERIT)
+                                     ? apr_pool_cleanup_null
+                                     : apr_unix_file_cleanup);
     }
 
     old_file->filedes = -1;

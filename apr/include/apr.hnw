@@ -112,7 +112,9 @@ extern "C" {
 
 #define APR_INLINE 
 #define APR_HAS_INLINE		0
+#ifndef __attribute__
 #define __attribute__(__x)
+#endif
 #define ENUM_BITFIELD(e,n,w)  signed int n : w
 
 #define APR_HAVE_ARPA_INET_H    0
@@ -357,6 +359,9 @@ typedef int apr_wait_t;
 #define APR_PATH_MAX PATH_MAX
 
 #define APR_INT64_T_FMT          "lld"
+#define APR_INT64_T_FMT_LEN      3
+#define APR_UINT64_T_FMT         "llu"
+#define APR_UINT64_T_FMT_LEN     3
 #define APR_TIME_T_FMT APR_INT64_T_FMT
 
 /* Deal with atoi64 variables ... these should move to apr_private.h */

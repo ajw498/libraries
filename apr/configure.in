@@ -445,6 +445,11 @@ case $host in
        OSDIR="unix"
        eolstr="\\n"
        ;;
+   *hpux10* ) 
+       enable_threads="no"
+       OSDIR="unix"
+       eolstr="\\n"
+       ;;
    *)
        OSDIR="unix"
        eolstr="\\n"
@@ -482,7 +487,8 @@ AC_SEARCH_LIBS(gethostname, nsl)
 AC_CHECK_LIB(socket, socket)
 AC_SEARCH_LIBS(crypt, crypt ufc)
 AC_CHECK_LIB(truerand, main)
-AC_CHECK_LIB(m, modf)
+AC_SEARCH_LIBS(modf, m)
+AC_SEARCH_LIBS(sqrt, m)
 
 dnl ----------------------------- Checking for Threads
 echo "${nl}Checking for Threads..."
@@ -1071,6 +1077,8 @@ if test "$ac_cv_sizeof_int" = "8"; then
     int64_literal='#define APR_INT64_C(val) (val)'
     int64_t_fmt='#define APR_INT64_T_FMT "d"'
     int64_t_fmt_len='#define APR_INT64_T_FMT_LEN 1'
+    uint64_t_fmt='#define APR_UINT64_T_FMT "u"'
+    uint64_t_fmt_len='#define APR_UINT64_T_FMT_LEN 1'
     int64_value="int"
     long_value=int
     int64_strfn="strtoi"
@@ -1078,6 +1086,8 @@ elif test "$ac_cv_sizeof_long" = "8"; then
     int64_literal='#define APR_INT64_C(val) (val##L)'
     int64_t_fmt='#define APR_INT64_T_FMT "ld"'
     int64_t_fmt_len='#define APR_INT64_T_FMT_LEN 2'
+    uint64_t_fmt='#define APR_UINT64_T_FMT "lu"'
+    uint64_t_fmt_len='#define APR_UINT64_T_FMT_LEN 2'
     int64_value="long"
     long_value=long
     int64_strfn="strtol"
@@ -1089,6 +1099,8 @@ elif test "$ac_cv_sizeof_long_long" = "8"; then
     # go to the OS-dependent section.
     int64_t_fmt='#define APR_INT64_T_FMT "lld"'
     int64_t_fmt_len='#define APR_INT64_T_FMT_LEN 3'
+    uint64_t_fmt='#define APR_UINT64_T_FMT "llu"'
+    uint64_t_fmt_len='#define APR_UINT64_T_FMT_LEN 3'
     int64_value="long long"
     long_value="long long"
     int64_strfn="strtoll"
@@ -1096,6 +1108,8 @@ elif test "$ac_cv_sizeof_long_double" = "8"; then
     int64_literal='#define APR_INT64_C(val) (val##LD)'
     int64_t_fmt='#define APR_INT64_T_FMT "Ld"'
     int64_t_fmt_len='#define APR_INT64_T_FMT_LEN 2'
+    uint64_t_fmt='#define APR_UINT64_T_FMT "Lu"'
+    uint64_t_fmt_len='#define APR_UINT64_T_FMT_LEN 2'
     int64_value="long double"
     long_value="long double"
     int64_strfn="strtoll"
@@ -1103,6 +1117,8 @@ elif test "$ac_cv_sizeof_longlong" = "8"; then
     int64_literal='#define APR_INT64_C(val) (val##LL)'
     int64_t_fmt='#define APR_INT64_T_FMT "qd"'
     int64_t_fmt_len='#define APR_INT64_T_FMT_LEN 2'
+    uint64_t_fmt='#define APR_UINT64_T_FMT "qu"'
+    uint64_t_fmt_len='#define APR_UINT64_T_FMT_LEN 2'
     int64_value="__int64"
     long_value="__int64"
     int64_strfn="strtoll"
@@ -1112,6 +1128,8 @@ else
     int64_literal='#error Can not determine the proper size for apr_int64_t'
     int64_t_fmt='#error Can not determine the proper size for apr_int64_t'
     int64_t_fmt_len='#error Can not determine the proper size for apr_int64_t'
+    uint64_t_fmt='#error Can not determine the proper size for apr_int64_t'
+    uint64_t_fmt_len='#error Can not determine the proper size for apr_int64_t'
 fi
 
 # If present, allow the C99 macro INT64_C to override our conversion.
@@ -1250,6 +1268,8 @@ AC_SUBST(ssize_t_value)
 AC_SUBST(socklen_t_value)
 AC_SUBST(int64_t_fmt) 
 AC_SUBST(int64_t_fmt_len) 
+AC_SUBST(uint64_t_fmt) 
+AC_SUBST(uint64_t_fmt_len) 
 AC_SUBST(ssize_t_fmt) 
 AC_SUBST(size_t_fmt)
 AC_SUBST(off_t_fmt) 
@@ -1403,6 +1423,8 @@ main()
     sem_t *psem;
     const char *sem_name = "/apr_autoconf";
 
+    if (sizeof(int) < sizeof(sem_t *))
+        exit(1);
     psem = sem_open(sem_name, O_CREAT, 0644, 1);
     if (psem == (sem_t *)SEM_FAILED) {
 	exit(1);
