@@ -309,8 +309,6 @@ APR_DECLARE(apr_status_t) apr_proc_create(apr_proc_t *new,
     new->err = attr->parent_err;
     new->out = attr->parent_out;
 
-	if (env == NULL) env = environ;
-
     if ((new->pid = fork()) < 0) {
         return errno;
     }
