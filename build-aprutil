@@ -1,0 +1,21 @@
+#!/bin/sh
+
+APRUTIL=apr-util
+
+if [ -n "$1" ]; then
+ PREFIX=$1
+else
+ PREFIX=/home/riscos/cross/local
+fi
+
+
+(cd $APRUTIL; \
+./configure --host=arm-riscos-aof --prefix=$PREFIX \
+--with-expat=$PREFIX --with-apr=../apr \
+--without-berkeley-db && \
+make clean && \
+touch uri/gen_uri_delims && \
+touch uri/gen_uri_delims.lo && \
+cp uri/uri_delims.h.pregen uri/uri_delims.h && \
+touch uri/uri_delims.h && \
+make && make install) || exit 1

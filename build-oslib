@@ -1,0 +1,23 @@
+#!/bin/sh
+#
+# Usage: build [prefix]
+#
+
+if [ -n "$1" ]; then
+ PREFIX=$1
+else
+ PREFIX=/home/riscos/cross/local
+fi
+
+BUILD=32
+
+mkdir -p $PREFIX/include $PREFIX/lib || exit 1
+
+
+rm -f $PREFIX/include/oslib*
+rm -f $PREFIX/lib/liboslib*
+
+ln -s `pwd`/oslib/oslib $PREFIX/include/oslib
+ln -s `pwd`/oslibsupport/oslibsupport $PREFIX/include/oslibsupport
+ln -s `pwd`/oslib/OSLib${BUILD}.o $PREFIX/lib/liboslib.o
+ln -s `pwd`/oslibsupport/OSLibSupport${BUILD}.o $PREFIX/lib/liboslibsupport.o
