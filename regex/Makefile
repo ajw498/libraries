@@ -82,8 +82,6 @@ tidy:
 clean:	tidy
 	rm -f *.o *.s re libregex.a
 
-PREFIX = /home/riscos/libs
-
 install:
 	mkdir -p $(PREFIX)/lib $(PREFIX)/include
 	cp libregex.a $(PREFIX)/lib

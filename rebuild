@@ -6,6 +6,7 @@ OPENSSL=openssl-0.9.6g
 NEON=neon-0.22.0
 EXPAT=expat-1.95.4
 ZLIB=zlib-1.1.4 
+REGEX=regex
 
 CONFIGDIRS=$ZLIB 
 #DIRS="$CONFIGDIRS $OPENSSL"
@@ -28,10 +29,12 @@ lt_cv_prog_cc_can_build_shared=\${lt_cv_prog_cc_can_build_shared=no}
 lt_cv_prog_cc_pic_works=\${lt_cv_prog_cc_pic_works=no}
 EOF
 
-(cd $NEON; \
-./configure --host=arm-riscos-aof -C --prefix=$PREFIX \
---with-libs=$PREFIX --with-force-zlib --with-ssl \
-&& make clean && make && make install) || exit
+#(cd $NEON; \
+#./configure --host=arm-riscos-aof -C --prefix=$PREFIX \
+#--with-libs=$PREFIX --with-force-zlib --with-ssl \
+#&& make clean && make && make install) || exit
 
+(cd $REGEX; \
+make clean && make && make install PREFIX=$PREFIX) || exit
 
 
