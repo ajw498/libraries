@@ -14,10 +14,15 @@ GETTEXT=gettext-0.11.5
 
 PREFIX=/home/riscos/cross/local
 
+mkdir -p $PREFIX/include
+
+rm -f /home/riscos/cross/include/unixlib/pthread.h
+
 (cd $ZLIB; ./configure --prefix=$PREFIX \
 && make clean && make && make install) || exit 1
 
-(cd $OPENSSL; ./Configure --prefix=$PREFIX -DNO_SYS_UN_H gcc) || exit 1
+(cd $OPENSSL; ./Configure --prefix=$PREFIX -DNO_SYS_UN_H gcc \
+&& make clean && make && make install) || exit 1
 
 (cd $EXPAT; \
 ./configure --host=arm-riscos-aof --prefix=$PREFIX \
@@ -40,6 +45,7 @@ cat > $NEON/config.cache << EOF
 ac_cv_prog_cc_g=\${ac_cv_prog_cc_g=no}
 lt_cv_prog_cc_can_build_shared=\${lt_cv_prog_cc_can_build_shared=no}
 lt_cv_prog_cc_pic_works=\${lt_cv_prog_cc_pic_works=no}
+ne_cv_lib_sslegd=\${ne_cv_lib_sslegd=yes}
 EOF
 
 (cd $NEON; \
