@@ -702,15 +702,15 @@ int RAND_poll(void)
 	 * have this. Use /dev/urandom if you can as /dev/random may block
 	 * if it runs out of random entries.  */
 
-	if (1/*(fh = fopen(DEVRANDOM, "r")) != NULL*/)
+	if ((fh = fopen(DEVRANDOM, "r")) != NULL)
 		{
 		unsigned char tmpbuf[ENTROPY_NEEDED];
-		int n = ENTROPY_NEEDED;
+		int n;
 		
-/*		setvbuf(fh, NULL, _IONBF, 0);
+		setvbuf(fh, NULL, _IONBF, 0);
 		n=fread((unsigned char *)tmpbuf,1,ENTROPY_NEEDED,fh);
 		fclose(fh);
-*/		RAND_add(tmpbuf,sizeof tmpbuf,n);
+		RAND_add(tmpbuf,sizeof tmpbuf,n);
 		memset(tmpbuf,0,n);
 		}
 #endif
