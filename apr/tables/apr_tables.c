@@ -124,6 +124,15 @@ APR_DECLARE(apr_array_header_t *) apr_array_make(apr_pool_t *p,
     return res;
 }
 
+APR_DECLARE(void *) apr_array_pop(apr_array_header_t *arr)
+{
+    if (apr_is_empty_array(arr)) {
+        return NULL;
+    }
+   
+    return arr->elts + (arr->elt_size * (--arr->nelts));
+}
+
 APR_DECLARE(void *) apr_array_push(apr_array_header_t *arr)
 {
     if (arr->nelts == arr->nalloc) {
@@ -1091,7 +1100,7 @@ static void overlap_hash(overlap_key *elt,
             if (flags == APR_OVERLAP_TABLES_MERGE) {
                 /* Just link this node at the end of the list
                  * of values for the key.  It doesn't need to
-                 * be linked into the tree, becaue the node at
+                 * be linked into the tree, because the node at
                  * the head of this key's value list is in the
                  * tree already.
                  */

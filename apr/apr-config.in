@@ -87,6 +87,7 @@ Usage: apr-config [OPTION]
 
 Known values for OPTION are:
   --prefix[=DIR]    change prefix to DIR
+  --bindir          print location where binaries are installed
   --cflags          print C compiler flags
   --cppflags        print cpp flags
   --includes        print include information
@@ -134,9 +135,9 @@ else
 fi
 
 if test "$location" = "installed"; then
-    LA_FILE="$libdir/${APR_LIBNAME}.la"
+    LA_FILE="$libdir/lib${APR_LIBNAME}.la"
 else
-    LA_FILE="$thisdir/${APR_LIBNAME}.la"
+    LA_FILE="$thisdir/lib${APR_LIBNAME}.la"
 fi
 
 flags=""
@@ -155,6 +156,10 @@ while test $# -gt 0; do
     ;;
     --prefix)
     echo $prefix
+    exit 0
+    ;;
+    --bindir)
+    echo $bindir
     exit 0
     ;;
     --cflags)
@@ -189,9 +194,9 @@ while test $# -gt 0; do
     --link-ld)
     if test "$location" = "installed"; then
         ### avoid using -L if libdir is a "standard" location like /usr/lib
-        flags="$flags -L$libdir -lapr"
+        flags="$flags -L$libdir -l${APR_LIBNAME}"
     else
-        flags="$flags -L$thisdir -lapr"
+        flags="$flags -L$thisdir -l${APR_LIBNAME}"
     fi
     ;;
     --link-libtool)
@@ -203,7 +208,7 @@ while test $# -gt 0; do
         flags="$flags $LA_FILE"
     elif test "$location" = "installed"; then
         ### avoid using -L if libdir is a "standard" location like /usr/lib
-        flags="$flags -L$libdir -lapr"
+        flags="$flags -L$libdir -l${APR_LIBNAME}"
     else
         flags="$flags $LA_FILE"
     fi

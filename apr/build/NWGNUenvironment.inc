@@ -141,10 +141,10 @@ PLIB3S	= $(METROWERKS)\Novell Support\Metrowerks Support\Libraries\MSL C++\MWCPP
 CFLAGS = -c -nosyspath -Cpp_exceptions off -RTTI off -align 4 -w nocmdline -proc PII -inst mmx
 
 # -g                    generate debugging information
-# -O1                   level 1 optimizations
+# -O0                   level 0 optimizations
 
 ifeq "$(RELEASE)" "debug"
-CFLAGS += -g -O1
+CFLAGS += -g -O0
 endif
 
 # -O4,p                 level 4 optimizations, optimize for speed
@@ -180,6 +180,20 @@ endif
 ifndef INSTALL
 INSTALL = $(APR_WORK)\Dist
 INSTDIRS = $(APR_WORK)\Dist
+endif
+
+# Add support for building IPV6 alongside
+ifneq "$(IPV6)" ""
+DEFINES += -DNW_BUILD_IPV6
+INCDIRS := $(NOVELLLIBC)\include\winsock\IPV6;$(INCDIRS)
+
+ifneq "$(IPV6)" "SET"
+OBJDIR := $(OBJDIR)_IPV6
+INSTALL := $(INSTALL)_IPV6
+INSTDIRS := $(INSTDIRS)_IPV6
+IPV6=SET
+endif
+
 endif
 
 INSTDEVDIRS := \
@@ -240,8 +254,7 @@ XMLLIB		= $(XML)/$(OBJDIR)/xmllib.lib
 #
 # Additional general defines
 #
-VERSION		= 2,0,0
-			
+
 EnvironmentDefined = 1
 endif # ifndef EnvironmentDefined
 

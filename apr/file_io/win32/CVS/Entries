@@ -1,11 +1,11 @@
-/dir.c/1.64/Mon Aug  5 22:02:14 2002//
-/filedup.c/1.49/Mon Aug  5 22:02:14 2002//
-/filepath.c/1.25/Mon Aug  5 22:02:14 2002//
-/filestat.c/1.68/Mon Aug  5 22:02:14 2002//
-/filesys.c/1.8/Mon Aug  5 22:02:14 2002//
-/flock.c/1.10/Mon Aug  5 22:02:14 2002//
-/open.c/1.108/Mon Aug  5 22:02:14 2002//
-/pipe.c/1.44/Mon Aug  5 22:02:14 2002//
-/readwrite.c/1.69/Mon Aug  5 22:02:14 2002//
-/seek.c/1.24/Mon Aug  5 22:02:14 2002//
+/dir.c/1.64/Sat Oct  5 13:28:11 2002//
+/filedup.c/1.50/Wed Oct 30 13:08:43 2002//
+/filepath.c/1.26/Wed Oct 30 13:08:43 2002//
+/filestat.c/1.69/Wed Oct 30 13:08:43 2002//
+/filesys.c/1.8/Sat Oct  5 13:28:12 2002//
+/flock.c/1.10/Sat Oct  5 13:28:12 2002//
+/open.c/1.111/Wed Oct 30 13:08:43 2002//
+/pipe.c/1.45/Wed Oct 30 13:08:43 2002//
+/readwrite.c/1.73/Wed Oct 30 13:08:43 2002//
+/seek.c/1.24/Sat Oct  5 13:28:12 2002//
 D

@@ -201,7 +201,7 @@ typedef void*                 apr_os_shm_t;
 #endif
 
 /**
- * @typedef apr_os_sock_t
+ * @typedef apr_os_sock_info_t
  * @brief alias for local OS socket
  */
 /**
@@ -212,8 +212,11 @@ struct apr_os_sock_info_t {
     apr_os_sock_t *os_sock; /**< always required */
     struct sockaddr *local; /**< NULL if not yet bound */
     struct sockaddr *remote; /**< NULL if not connected */
-    int family;             /**< always required (APR_INET, APR_INET6, etc. */
-    int type;               /**< always required (SOCK_STREAM, SOCK_DGRAM, etc. */
+    int family;             /**< always required (APR_INET, APR_INET6, etc.) */
+    int type;               /**< always required (SOCK_STREAM, SOCK_DGRAM, etc.) */
+#ifdef APR_ENABLE_FOR_1_0   /**< enable with APR 1.0 */
+    int protocol;           /**< 0 or actual protocol (APR_PROTO_SCTP, APR_PROTO_TCP, etc.) */
+#endif
 };
 
 typedef struct apr_os_sock_info_t apr_os_sock_info_t;
@@ -364,6 +367,18 @@ APR_DECLARE(apr_status_t) apr_os_file_put(apr_file_t **file,
                                           apr_int32_t flags, apr_pool_t *cont); 
 
 /**
+ * convert the file from os specific type to apr type.
+ * @param file The apr file we are converting to.
+ * @param thefile The os specific pipe to convert
+ * @param cont The pool to use if it is needed.
+ * @remark On Unix, it is only possible to put a file descriptor into
+ *         an apr file type.
+ */
+APR_DECLARE(apr_status_t) apr_os_pipe_put(apr_file_t **file,
+                                          apr_os_file_t *thefile,
+                                          apr_pool_t *cont);
+
+/**
  * convert the dir from os specific type to apr type.
  * @param dir The apr dir we are converting to.
  * @param thedir The os specific dir to convert
@@ -378,6 +393,8 @@ APR_DECLARE(apr_status_t) apr_os_dir_put(apr_dir_t **dir,
  * @param sock The pool to use.
  * @param thesock The socket to convert to.
  * @param cont The socket we are converting to an apr type.
+ * @remark If it is a true socket, it is best to call apr_os_sock_make()
+ *         and provide APR with more information about the socket.
  */
 APR_DECLARE(apr_status_t) apr_os_sock_put(apr_socket_t **sock, 
                                           apr_os_sock_t *thesock, 

@@ -294,14 +294,16 @@ static char *apr_gcvt(double number, int ndigit, char *buf, boolean_e altform)
  */
 #define INS_CHAR(c, sp, bep, cc)                    \
 {                                                   \
-    if (sp >= bep) {                                \
-        vbuff->curpos = sp;                         \
-        if (flush_func(vbuff))                      \
-            return -1;                              \
-        sp = vbuff->curpos;                         \
-        bep = vbuff->endpos;                        \
+    if (sp) {                                       \
+        if (sp >= bep) {                            \
+            vbuff->curpos = sp;                     \
+            if (flush_func(vbuff))                  \
+                return -1;                          \
+            sp = vbuff->curpos;                     \
+            bep = vbuff->endpos;                    \
+        }                                           \
+        *sp++ = (c);                                \
     }                                               \
-    *sp++ = (c);                                    \
     cc++;                                           \
 }
 
@@ -952,9 +954,38 @@ APR_DECLARE(int) apr_vformatter(int (*flush_func)(apr_vformatter_buff_t *),
             case 's':
                 s = va_arg(ap, char *);
                 if (s != NULL) {
-                    s_len = strlen(s);
-                    if (adjust_precision && precision < s_len)
-                        s_len = precision;
+                    if (!adjust_precision) {
+                        s_len = strlen(s);
+                    }
+                    else {
+                        /* From the C library standard in section 7.9.6.1:
+                         * ...if the precision is specified, no more then
+                         * that many characters are written.  If the
+                         * precision is not specified or is greater
+                         * than the size of the array, the array shall
+                         * contain a null character.
+                         *
+                         * My reading is is precision is specified and
+                         * is less then or equal to the size of the
+                         * array, no null character is required.  So
+                         * we can't do a strlen.
+                         *
+                         * This figures out the length of the string
+                         * up to the precision.  Once it's long enough
+                         * for the specified precision, we don't care
+                         * anymore.
+                         *
+                         * NOTE: you must do the length comparison
+                         * before the check for the null character.
+                         * Otherwise, you'll check one beyond the
+                         * last valid character.
+                         */
+                        const char *walk;
+
+                        for (walk = s, s_len = 0;
+                             (s_len < precision) && (*walk != '\0');
+                             ++walk, ++s_len);
+                    }
                 }
                 else {
                     s = S_NULL;
@@ -1218,16 +1249,27 @@ APR_DECLARE_NONSTD(int) apr_snprintf(char *buf, apr_size_t len,
     va_list ap;
     apr_vformatter_buff_t vbuff;
 
-    if (len == 0)
-        return 0;
-
-    /* save one byte for nul terminator */
-    vbuff.curpos = buf;
-    vbuff.endpos = buf + len - 1;
+    if (len == 0) {
+        /* NOTE: This is a special case; we just want to return the number
+         * of chars that would be written (minus \0) if the buffer
+         * size was infinite. We leverage the fact that INS_CHAR
+         * just does actual inserts iff the buffer pointer is non-NULL.
+         * In this case, we don't care what buf is; it can be NULL, since
+         * we don't touch it at all.
+         */
+        vbuff.curpos = NULL;
+        vbuff.endpos = NULL;
+    } else {
+        /* save one byte for nul terminator */
+        vbuff.curpos = buf;
+        vbuff.endpos = buf + len - 1;
+    }
     va_start(ap, format);
     cc = apr_vformatter(snprintf_flush, &vbuff, format, ap);
     va_end(ap);
-    *vbuff.curpos = '\0';
+    if (len != 0) {
+        *vbuff.curpos = '\0';
+    }
     return (cc == -1) ? (int)len : cc;
 }
 
@@ -1238,13 +1280,18 @@ APR_DECLARE(int) apr_vsnprintf(char *buf, apr_size_t len, const char *format,
     int cc;
     apr_vformatter_buff_t vbuff;
 
-    if (len == 0)
-        return 0;
-
-    /* save one byte for nul terminator */
-    vbuff.curpos = buf;
-    vbuff.endpos = buf + len - 1;
+    if (len == 0) {
+        /* See above note */
+        vbuff.curpos = NULL;
+        vbuff.endpos = NULL;
+    } else {
+        /* save one byte for nul terminator */
+        vbuff.curpos = buf;
+        vbuff.endpos = buf + len - 1;
+    }
     cc = apr_vformatter(snprintf_flush, &vbuff, format, ap);
-    *vbuff.curpos = '\0';
+    if (len != 0) {
+        *vbuff.curpos = '\0';
+    }
     return (cc == -1) ? (int)len : cc;
 }

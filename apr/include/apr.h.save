@@ -266,8 +266,8 @@ typedef  socklen_t       apr_socklen_t;
 #define APR_INT64_T_FMT_LEN 3
 
 /* Deal with atoi64 variables ... these should move to apr_private.h */
-#define APR_HAVE_INT64_STRFN  0
-#define APR_INT64_STRFN	      strtoq
+#define APR_HAVE_INT64_STRFN  1
+#define APR_INT64_STRFN	      strtoll
 
 /* are we going to force the generic atomic operations */
 #define APR_FORCE_ATOMIC_GENERIC 0

@@ -64,6 +64,9 @@
 #if HAVE_SYS_POLL_H
 #include <sys/poll.h>
 #endif
+#if HAVE_ALLOCA_H
+#include <alloca.h>
+#endif
 
 #ifdef NETWARE
 #define HAS_SOCKETS(dt) (dt == APR_POLL_SOCKET) ? 1 : 0
@@ -463,6 +466,7 @@ APR_DECLARE(apr_status_t) apr_pollset_remove(apr_pollset_t *pollset,
                 else {
                     pollset->pollset[dst] = pollset->pollset[i];
                     pollset->query_set[dst] = pollset->query_set[i];
+                    dst++;
                 }
             }
             return APR_SUCCESS;
@@ -493,6 +497,7 @@ APR_DECLARE(apr_status_t) apr_pollset_remove(apr_pollset_t *pollset,
                 }
                 else {
                     pollset->query_set[dst] = pollset->query_set[i];
+                    dst++;
                 }
             }
             FD_CLR(fd, &(pollset->readset));

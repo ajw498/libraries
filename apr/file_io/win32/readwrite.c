@@ -303,15 +303,43 @@ APR_DECLARE(apr_status_t) apr_file_write(apr_file_t *thefile, const void *buf, a
         apr_thread_mutex_unlock(thefile->mutex);
         return rv;
     } else {
-        if (thefile->pOverlapped && !thefile->pipe) {
-            thefile->pOverlapped->Offset     = (DWORD)thefile->filePtr;
-            thefile->pOverlapped->OffsetHigh = (DWORD)(thefile->filePtr >> 32);
+        if (!thefile->pipe) {
+            apr_off_t offset = 0;
+            apr_status_t rc;
+            if (thefile->append) {
+                /* apr_file_lock will mutex the file across processes.
+                 * The call to apr_thread_mutex_lock is added to avoid
+                 * a race condition between LockFile and WriteFile 
+                 * that occasionally leads to deadlocked threads.
+                 */
+                apr_thread_mutex_lock(thefile->mutex);
+                rc = apr_file_lock(thefile, APR_FLOCK_EXCLUSIVE);
+                if (rc != APR_SUCCESS) {
+                    apr_thread_mutex_unlock(thefile->mutex);
+                    return rc;
+                }
+                rc = apr_file_seek(thefile, APR_END, &offset);
+                if (rc != APR_SUCCESS) {
+                    apr_thread_mutex_unlock(thefile->mutex);
+                    return rc;
+                }
+            }
+            if (thefile->pOverlapped) {
+                thefile->pOverlapped->Offset     = (DWORD)thefile->filePtr;
+                thefile->pOverlapped->OffsetHigh = (DWORD)(thefile->filePtr >> 32);
+            }
+            rv = WriteFile(thefile->filehand, buf, *nbytes, &bwrote,
+                           thefile->pOverlapped);
+            if (thefile->append) {
+                apr_file_unlock(thefile);
+                apr_thread_mutex_unlock(thefile->mutex);
+            }
         }
-        else if (!thefile->pipe && thefile->append) {
-            SetFilePointer(thefile->filehand, 0, NULL, FILE_END);
+        else {
+            rv = WriteFile(thefile->filehand, buf, *nbytes, &bwrote,
+                           thefile->pOverlapped);
         }
-        if (WriteFile(thefile->filehand, buf, *nbytes, &bwrote, 
-                      thefile->pOverlapped)) {
+        if (rv) {
             *nbytes = bwrote;
             rv = APR_SUCCESS;
         }

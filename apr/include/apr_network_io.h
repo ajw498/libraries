@@ -103,7 +103,9 @@ extern "C" {
 #define APR_SO_SNDBUF        64
 #define APR_SO_RCVBUF        128
 #define APR_SO_DISCONNECTED  256
-#define APR_TCP_NODELAY      512
+#define APR_TCP_NODELAY      512  /**< For SCTP sockets, this is mapped
+                                   * to STCP_NODELAY internally.
+                                   */
 #define APR_TCP_NOPUSH       1024
 #define APR_RESET_NODELAY    2048 /**< This flag is ONLY set internally
                                    * when we set APR_TCP_NOPUSH with
@@ -136,6 +138,9 @@ extern "C" {
 typedef enum {APR_SHUTDOWN_READ, APR_SHUTDOWN_WRITE, 
 	      APR_SHUTDOWN_READWRITE} apr_shutdown_how_e;
 
+#define APR_IPV4_ADDR_OK  0x01  /* see doc for apr_sockaddr_info_get() */
+#define APR_IPV6_ADDR_OK  0x02  /* see doc for apr_sockaddr_info_get() */
+
 #if (!APR_HAVE_IN_ADDR)
 /**
  * We need to make sure we always have an in_addr type, so APR will just
@@ -163,6 +168,16 @@ struct in_addr {
 #if APR_HAVE_IPV6
 #define APR_INET6    AF_INET6
 #endif
+
+/**
+ * @defgroup IP_Proto IP Protocol Definitions for use when creating sockets
+ * @{
+ */
+#define APR_PROTO_TCP       6
+#define APR_PROTO_UDP      17
+#define APR_PROTO_SCTP    132
+/** @} */
+
 
 /**
  * Enum to tell us if we're interested in remote or local socket
@@ -262,6 +277,7 @@ struct apr_hdtr_t {
 
 /**
  * Create a socket.
+ * @remark With APR 1.0, this function will pick up a new protocol parameter.
  * @param new_sock The new socket that has been set up.
  * @param family The address family of the socket (e.g., APR_INET).
  * @param type The type of the socket (e.g., SOCK_STREAM).
@@ -270,6 +286,20 @@ struct apr_hdtr_t {
 APR_DECLARE(apr_status_t) apr_socket_create(apr_socket_t **new_sock, 
                                             int family, int type,
                                             apr_pool_t *cont);
+
+/**
+ * Create a socket.
+ * @remark With APR 1.0, this function will be removed.
+ * @param new_sock The new socket that has been set up.
+ * @param family The address family of the socket (e.g., APR_INET).
+ * @param type The type of the socket (e.g., SOCK_STREAM).
+ * @param protocol The protocol of the socket (e.g., APR_PROTO_TCP).
+ * @param cont The pool to use
+ */
+APR_DECLARE(apr_status_t) apr_socket_create_ex(apr_socket_t **new_sock, 
+                                               int family, int type,
+                                               int protocol,
+                                               apr_pool_t *cont);
 
 /**
  * Shutdown either reading, writing, or both sides of a socket.
@@ -335,11 +365,24 @@ APR_DECLARE(apr_status_t) apr_connect(apr_socket_t *sock, apr_sockaddr_t *sa);
 /**
  * Create apr_sockaddr_t from hostname, address family, and port.
  * @param sa The new apr_sockaddr_t.
- * @param hostname The hostname or numeric address string to resolve/parse.
+ * @param hostname The hostname or numeric address string to resolve/parse, or
+ *               NULL to build an address that corresponds to 0.0.0.0 or ::
  * @param family The address family to use, or APR_UNSPEC if the system should 
  *               decide.
  * @param port The port number.
- * @param flags Special processing flags.
+ * @param flags Special processing flags:
+ * <PRE>
+ *       APR_IPV4_ADDR_OK          first query for IPv4 addresses; only look
+ *                                 for IPv6 addresses if the first query failed;
+ *                                 only valid if family is APR_UNSPEC and hostname
+ *                                 isn't NULL; mutually exclusive with
+ *                                 APR_IPV6_ADDR_OK
+ *       APR_IPV6_ADDR_OK          first query for IPv6 addresses; only look
+ *                                 for IPv4 addresses if the first query failed;
+ *                                 only valid if family is APR_UNSPEC and hostname
+ *                                 isn't NULL and APR_HAVE_IPV6; mutually exclusive
+ *                                 with APR_IPV4_ADDR_OK
+ * </PRE>
  * @param p The pool for the apr_sockaddr_t and associated storage.
  */
 APR_DECLARE(apr_status_t) apr_sockaddr_info_get(apr_sockaddr_t **sa,
@@ -712,6 +755,14 @@ APR_DECLARE(int) apr_ipsubnet_test(apr_ipsubnet_t *ipsub, apr_sockaddr_t *sa);
 apr_status_t apr_socket_accept_filter(apr_socket_t *sock, char *name,
                                       char *args);
 #endif
+
+/**
+ * Return the protocol of the socket.
+ * @param sock The socket to query.
+ * @param protocol The returned protocol (e.g., APR_PROTO_TCP).
+ */
+APR_DECLARE(apr_status_t) apr_socket_protocol_get(apr_socket_t *sock,
+                                                  int *protocol);
 
 /**
  * Set a socket to be inherited by child processes.

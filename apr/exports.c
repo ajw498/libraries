@@ -48,7 +48,7 @@
 const void *ap_ugly_hack = NULL;
 
 /*
- * /home/cross/libs/apr/include/apr_allocator.h
+ * /home/cross/libraries/apr/include/apr_allocator.h
  */
 const void *ap_hack_apr_allocator_create = (const void *)apr_allocator_create;
 const void *ap_hack_apr_allocator_destroy = (const void *)apr_allocator_destroy;
@@ -68,7 +68,7 @@ const void *ap_hack_apr_allocator_get_mutex = (const void *)apr_allocator_get_mu
 #endif /* APR_HAS_THREADS */
 
 /*
- * /home/cross/libs/apr/include/apr_atomic.h
+ * /home/cross/libraries/apr/include/apr_atomic.h
  */
 #if defined(DOXYGEN)
 #else /* !DOXYGEN */
@@ -85,7 +85,7 @@ const void *ap_hack_apr_atomic_dec = (const void *)apr_atomic_dec;
 #endif /* DOXYGEN */
 
 /*
- * /home/cross/libs/apr/include/apr_dso.h
+ * /home/cross/libraries/apr/include/apr_dso.h
  */
 #if APR_HAS_DSO || defined(DOXYGEN)
 const void *ap_hack_apr_dso_load = (const void *)apr_dso_load;
@@ -95,12 +95,12 @@ const void *ap_hack_apr_dso_error = (const void *)apr_dso_error;
 #endif /* APR_HAS_DSO */
 
 /*
- * /home/cross/libs/apr/include/apr_errno.h
+ * /home/cross/libraries/apr/include/apr_errno.h
  */
 const void *ap_hack_apr_strerror = (const void *)apr_strerror;
 
 /*
- * /home/cross/libs/apr/include/apr_file_info.h
+ * /home/cross/libraries/apr/include/apr_file_info.h
  */
 const void *ap_hack_apr_stat = (const void *)apr_stat;
 const void *ap_hack_apr_lstat = (const void *)apr_lstat;
@@ -114,7 +114,7 @@ const void *ap_hack_apr_filepath_get = (const void *)apr_filepath_get;
 const void *ap_hack_apr_filepath_set = (const void *)apr_filepath_set;
 
 /*
- * /home/cross/libs/apr/include/apr_file_io.h
+ * /home/cross/libraries/apr/include/apr_file_io.h
  */
 const void *ap_hack_apr_file_open = (const void *)apr_file_open;
 const void *ap_hack_apr_file_close = (const void *)apr_file_close;
@@ -167,14 +167,14 @@ const void *ap_hack_apr_file_unset_inherit = (const void *)apr_file_unset_inheri
 const void *ap_hack_apr_file_mktemp = (const void *)apr_file_mktemp;
 
 /*
- * /home/cross/libs/apr/include/apr_fnmatch.h
+ * /home/cross/libraries/apr/include/apr_fnmatch.h
  */
 const void *ap_hack_apr_fnmatch = (const void *)apr_fnmatch;
 const void *ap_hack_apr_fnmatch_test = (const void *)apr_fnmatch_test;
 const void *ap_hack_apr_is_fnmatch = (const void *)apr_is_fnmatch;
 
 /*
- * /home/cross/libs/apr/include/apr_general.h
+ * /home/cross/libraries/apr/include/apr_general.h
  */
 const void *ap_hack_apr_initialize = (const void *)apr_initialize;
 const void *ap_hack_apr_app_initialize = (const void *)apr_app_initialize;
@@ -185,14 +185,14 @@ const void *ap_hack_apr_generate_random_bytes = (const void *)apr_generate_rando
 #endif
 
 /*
- * /home/cross/libs/apr/include/apr_getopt.h
+ * /home/cross/libraries/apr/include/apr_getopt.h
  */
 const void *ap_hack_apr_getopt_init = (const void *)apr_getopt_init;
 const void *ap_hack_apr_getopt = (const void *)apr_getopt;
 const void *ap_hack_apr_getopt_long = (const void *)apr_getopt_long;
 
 /*
- * /home/cross/libs/apr/include/apr_global_mutex.h
+ * /home/cross/libraries/apr/include/apr_global_mutex.h
  */
 #if !APR_PROC_MUTEX_IS_GLOBAL || defined(DOXYGEN)
 const void *ap_hack_apr_global_mutex_create = (const void *)apr_global_mutex_create;
@@ -206,7 +206,7 @@ const void *ap_hack_apr_global_mutex_pool_get = (const void *)apr_global_mutex_p
 #endif
 
 /*
- * /home/cross/libs/apr/include/apr_hash.h
+ * /home/cross/libraries/apr/include/apr_hash.h
  */
 const void *ap_hack_apr_hash_make = (const void *)apr_hash_make;
 const void *ap_hack_apr_hash_copy = (const void *)apr_hash_copy;
@@ -221,14 +221,14 @@ const void *ap_hack_apr_hash_merge = (const void *)apr_hash_merge;
 const void *ap_hack_apr_hash_pool_get = (const void *)apr_hash_pool_get;
 
 /*
- * /home/cross/libs/apr/include/apr_lib.h
+ * /home/cross/libraries/apr/include/apr_lib.h
  */
 const void *ap_hack_apr_filename_of_pathname = (const void *)apr_filename_of_pathname;
 const void *ap_hack_apr_vformatter = (const void *)apr_vformatter;
 const void *ap_hack_apr_password_get = (const void *)apr_password_get;
 
 /*
- * /home/cross/libs/apr/include/apr_mmap.h
+ * /home/cross/libraries/apr/include/apr_mmap.h
  */
 #if APR_HAS_MMAP || defined(DOXYGEN)
 const void *ap_hack_apr_mmap_create = (const void *)apr_mmap_create;
@@ -242,7 +242,7 @@ const void *ap_hack_apr_mmap_offset = (const void *)apr_mmap_offset;
 #endif /* APR_HAS_MMAP */
 
 /*
- * /home/cross/libs/apr/include/apr_network_io.h
+ * /home/cross/libraries/apr/include/apr_network_io.h
  */
 const void *ap_hack_apr_socket_create = (const void *)apr_socket_create;
 const void *ap_hack_apr_shutdown = (const void *)apr_shutdown;
@@ -289,7 +289,7 @@ const void *ap_hack_apr_socket_inherit_unset = (const void *)apr_socket_inherit_
 const void *ap_hack_apr_socket_unset_inherit = (const void *)apr_socket_unset_inherit;
 
 /*
- * /home/cross/libs/apr/include/apr_poll.h
+ * /home/cross/libraries/apr/include/apr_poll.h
  */
 const void *ap_hack_apr_poll_setup = (const void *)apr_poll_setup;
 const void *ap_hack_apr_poll = (const void *)apr_poll;
@@ -305,7 +305,7 @@ const void *ap_hack_apr_pollset_remove = (const void *)apr_pollset_remove;
 const void *ap_hack_apr_pollset_poll = (const void *)apr_pollset_poll;
 
 /*
- * /home/cross/libs/apr/include/apr_pools.h
+ * /home/cross/libraries/apr/include/apr_pools.h
  */
 const void *ap_hack_apr_pool_initialize = (const void *)apr_pool_initialize;
 const void *ap_hack_apr_pool_terminate = (const void *)apr_pool_terminate;
@@ -353,7 +353,7 @@ const void *ap_hack_apr_pool_lock = (const void *)apr_pool_lock;
 #endif /* APR_POOL_DEBUG or DOXYGEN */
 
 /*
- * /home/cross/libs/apr/include/apr_portable.h
+ * /home/cross/libraries/apr/include/apr_portable.h
  */
 #if APR_PROC_MUTEX_IS_GLOBAL
 #else
@@ -391,7 +391,7 @@ const void *ap_hack_apr_os_uuid_get = (const void *)apr_os_uuid_get;
 #endif /* APR_HAS_DSO */
 
 /*
- * /home/cross/libs/apr/include/apr_proc_mutex.h
+ * /home/cross/libraries/apr/include/apr_proc_mutex.h
  */
 const void *ap_hack_apr_proc_mutex_create = (const void *)apr_proc_mutex_create;
 const void *ap_hack_apr_proc_mutex_child_init = (const void *)apr_proc_mutex_child_init;
@@ -404,7 +404,7 @@ const void *ap_hack_apr_proc_mutex_defname = (const void *)apr_proc_mutex_defnam
 const void *ap_hack_apr_proc_mutex_pool_get = (const void *)apr_proc_mutex_pool_get;
 
 /*
- * /home/cross/libs/apr/include/apr_shm.h
+ * /home/cross/libraries/apr/include/apr_shm.h
  */
 const void *ap_hack_apr_shm_create = (const void *)apr_shm_create;
 const void *ap_hack_apr_shm_destroy = (const void *)apr_shm_destroy;
@@ -415,7 +415,7 @@ const void *ap_hack_apr_shm_size_get = (const void *)apr_shm_size_get;
 const void *ap_hack_apr_shm_pool_get = (const void *)apr_shm_pool_get;
 
 /*
- * /home/cross/libs/apr/include/apr_signal.h
+ * /home/cross/libraries/apr/include/apr_signal.h
  */
 #if APR_HAVE_SIGACTION
 const void *ap_hack_apr_signal = (const void *)apr_signal;
@@ -425,7 +425,7 @@ const void *ap_hack_apr_signal_description_get = (const void *)apr_signal_descri
 const void *ap_hack_apr_signal_get_description = (const void *)apr_signal_get_description;
 
 /*
- * /home/cross/libs/apr/include/apr_strings.h
+ * /home/cross/libraries/apr/include/apr_strings.h
  */
 const void *ap_hack_apr_strnatcmp = (const void *)apr_strnatcmp;
 const void *ap_hack_apr_strnatcasecmp = (const void *)apr_strnatcasecmp;
@@ -451,7 +451,7 @@ const void *ap_hack_apr_atoi64 = (const void *)apr_atoi64;
 const void *ap_hack_apr_strfsize = (const void *)apr_strfsize;
 
 /*
- * /home/cross/libs/apr/include/apr_tables.h
+ * /home/cross/libraries/apr/include/apr_tables.h
  */
 const void *ap_hack_apr_table_elts = (const void *)apr_table_elts;
 const void *ap_hack_apr_is_empty_table = (const void *)apr_is_empty_table;
@@ -480,7 +480,7 @@ const void *ap_hack_apr_table_vdo = (const void *)apr_table_vdo;
 const void *ap_hack_apr_table_overlap = (const void *)apr_table_overlap;
 
 /*
- * /home/cross/libs/apr/include/apr_thread_cond.h
+ * /home/cross/libraries/apr/include/apr_thread_cond.h
  */
 #if APR_HAS_THREADS
 const void *ap_hack_apr_thread_cond_create = (const void *)apr_thread_cond_create;
@@ -493,7 +493,7 @@ const void *ap_hack_apr_thread_cond_pool_get = (const void *)apr_thread_cond_poo
 #endif /* APR_HAS_THREADS */
 
 /*
- * /home/cross/libs/apr/include/apr_thread_mutex.h
+ * /home/cross/libraries/apr/include/apr_thread_mutex.h
  */
 #if APR_HAS_THREADS
 const void *ap_hack_apr_thread_mutex_create = (const void *)apr_thread_mutex_create;
@@ -505,7 +505,7 @@ const void *ap_hack_apr_thread_mutex_pool_get = (const void *)apr_thread_mutex_p
 #endif /* APR_HAS_THREADS */
 
 /*
- * /home/cross/libs/apr/include/apr_thread_proc.h
+ * /home/cross/libraries/apr/include/apr_thread_proc.h
  */
 #if APR_HAS_THREADS
 const void *ap_hack_apr_threadattr_create = (const void *)apr_threadattr_create;
@@ -562,7 +562,7 @@ const void *ap_hack_apr_thread_pool_get = (const void *)apr_thread_pool_get;
 #endif /* APR_HAS_THREADS */
 
 /*
- * /home/cross/libs/apr/include/apr_thread_rwlock.h
+ * /home/cross/libraries/apr/include/apr_thread_rwlock.h
  */
 #if APR_HAS_THREADS
 const void *ap_hack_apr_thread_rwlock_create = (const void *)apr_thread_rwlock_create;
@@ -576,7 +576,7 @@ const void *ap_hack_apr_thread_rwlock_pool_get = (const void *)apr_thread_rwlock
 #endif  /* APR_HAS_THREADS */
 
 /*
- * /home/cross/libs/apr/include/apr_time.h
+ * /home/cross/libraries/apr/include/apr_time.h
  */
 const void *ap_hack_apr_time_now = (const void *)apr_time_now;
 const void *ap_hack_apr_time_ansi_put = (const void *)apr_time_ansi_put;
@@ -594,7 +594,7 @@ const void *ap_hack_apr_strftime = (const void *)apr_strftime;
 const void *ap_hack_apr_time_clock_hires = (const void *)apr_time_clock_hires;
 
 /*
- * /home/cross/libs/apr/include/apr_user.h
+ * /home/cross/libraries/apr/include/apr_user.h
  */
 #if APR_HAS_USER 
 const void *ap_hack_apr_current_userid = (const void *)apr_current_userid;
@@ -615,7 +615,7 @@ const void *ap_hack_apr_compare_groups = (const void *)apr_compare_groups;
 #endif  /* ! APR_HAS_USER */
 
 /*
- * /home/cross/libs/apr/include/apr_version.h
+ * /home/cross/libraries/apr/include/apr_version.h
  */
 const void *ap_hack_apr_version = (const void *)apr_version;
 const void *ap_hack_apr_version_string = (const void *)apr_version_string;

@@ -52,22 +52,36 @@
  * <http://www.apache.org/>.
  */
 
+#ifndef APR_TEST_INCLUDES
+#define APR_TEST_INCLUDES
+
+#include "CuTest.h"
+#include "apr_pools.h"
+
 /* Some simple functions to make the test apps easier to write and
  * a bit more consistent...
  */
 
-/* Things to bear in mind when using these...
- *
- * If you include '\t' within the string passed in it won't be included
- * in the spacing, so use spaces instead :)
- * 
- */ 
+extern apr_pool_t *p;
 
-#ifndef APR_TEST_INCLUDES
-#define APR_TEST_INCLUDES
+CuSuite *getsuite(void);
+
+CuSuite *teststr(void);
+CuSuite *testtime(void);
+CuSuite *testvsn(void);
+CuSuite *testipsub(void);
+CuSuite *testmmap(void);
+CuSuite *testud(void);
+CuSuite *testtable(void);
+CuSuite *testsleep(void);
+CuSuite *testpool(void);
+CuSuite *testfmt(void);
+
+
 
 #include "apr_strings.h"
 #include "apr_time.h"
+
 
 #define TEST_EQ(str, func, value, good, bad) \
     printf("%-60s", str); \
@@ -97,6 +111,20 @@
     printf("%s\n", good); \
     }
 
+#define TEST_NEQ_NONFATAL(str, func, value, good, bad) \
+    printf("%-60s", str); \
+    { \
+    apr_status_t rv; \
+    if ((rv = func) != value){ \
+        char errmsg[200]; \
+        printf("%s\n", bad); \
+        fprintf(stderr, "Error was %d : %s\n", rv, \
+                apr_strerror(rv, (char*)&errmsg, 200)); \
+    } \
+    else \
+        printf("%s\n", good); \
+    }
+
 #define TEST_STATUS(str, func, testmacro, good, bad) \
     printf("%-60s", str); \
     { \
@@ -113,6 +141,9 @@
 
 #define STD_TEST_NEQ(str, func) \
 	TEST_NEQ(str, func, APR_SUCCESS, "OK", "Failed");
+
+#define STD_TEST_NEQ_NONFATAL(str, func) \
+        TEST_NEQ_NONFATAL(str, func, APR_SUCCESS, "OK", "Failed");
 
 #define PRINT_ERROR(rv) \
     { \

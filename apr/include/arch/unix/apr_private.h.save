@@ -63,7 +63,7 @@
 /* #undef CRYPT_R_CRYPTD */
 
 /* Define if crypt_r uses struct crypt_data */
-/* #undef CRYPT_R_STRUCT_CRYPT_DATA */
+#define CRYPT_R_STRUCT_CRYPT_DATA 1
 
 /* Define if gethostbyname_r has the glibc style */
 /* #undef GETHOSTBYNAME_R_GLIBC2 */
@@ -93,7 +93,7 @@
 #define HAVE_CRYPT_H 1
 
 /* Define to 1 if you have the `crypt_r' function. */
-/* #undef HAVE_CRYPT_R */
+#define HAVE_CRYPT_R 1
 
 /* Define to 1 if you have the <ctype.h> header file. */
 #define HAVE_CTYPE_H 1

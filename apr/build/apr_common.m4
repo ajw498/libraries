@@ -235,10 +235,10 @@ AC_DEFUN(APR_CHECK_DEFINE_FILES,[
     for curhdr in $2
     do
       AC_EGREP_CPP(YES_IS_DEFINED, [
-      #include <$curhdr>
-      #ifdef $1
-      YES_IS_DEFINED
-      #endif
+#include <$curhdr>
+#ifdef $1
+YES_IS_DEFINED
+#endif
       ], ac_cv_define_$1=yes)
     done
   ])
@@ -254,10 +254,10 @@ dnl
 AC_DEFUN(APR_CHECK_DEFINE,[
   AC_CACHE_CHECK([for $1 in $2],ac_cv_define_$1,[
     AC_EGREP_CPP(YES_IS_DEFINED, [
-    #include <$2>
-    #ifdef $1
-    YES_IS_DEFINED
-    #endif
+#include <$2>
+#ifdef $1
+YES_IS_DEFINED
+#endif
     ], ac_cv_define_$1=yes, ac_cv_define_$1=no)
   ])
   if test "$ac_cv_define_$1" = "yes"; then
@@ -270,30 +270,24 @@ dnl APR_CHECK_APR_DEFINE( symbol, path_to_apr )
 dnl
 AC_DEFUN(APR_CHECK_APR_DEFINE,[
     AC_EGREP_CPP(YES_IS_DEFINED, [
-    #include "$2/include/apr.h"
-    #if $1
-    YES_IS_DEFINED
-    #endif
+#include "$2/include/apr.h"
+#if $1
+YES_IS_DEFINED
+#endif
     ], ac_cv_define_$1=yes, ac_cv_define_$1=no)
 ])
 
-define(APR_CHECK_FILE,[
-ac_safe=`echo "$1" | sed 'y%./+-%__p_%'`
-AC_MSG_CHECKING([for $1])
-AC_CACHE_VAL(ac_cv_file_$ac_safe, [
-  if test -r $1; then
-    eval "ac_cv_file_$ac_safe=yes"
-  else
-    eval "ac_cv_file_$ac_safe=no"
-  fi
-])dnl
-if eval "test \"`echo '$ac_cv_file_'$ac_safe`\" = yes"; then
-  AC_MSG_RESULT(yes)
-  ifelse([$2], , :, [$2])
-else
-  AC_MSG_RESULT(no)
-ifelse([$3], , , [$3])
-fi
+dnl APR_CHECK_FILE(filename); set ac_cv_file_filename to
+dnl "yes" if 'filename' is readable, else "no".
+AC_DEFUN([APR_CHECK_FILE], [
+dnl Pick a safe variable name
+define([apr_cvname], ac_cv_file_[]translit([$1], [./+-], [__p_]))
+AC_CACHE_CHECK([for $1], [apr_cvname],
+[if test -r $1; then
+   apr_cvname=yes
+ else
+   apr_cvname=no
+ fi])
 ])
 
 define(APR_IFALLYES,[dnl
@@ -524,8 +518,8 @@ dnl
 if test "$ac_cv_crypt_r_style" = "cryptd"; then
     AC_DEFINE(CRYPT_R_CRYPTD, 1, [Define if crypt_r has uses CRYPTD])
 fi
-dnl if we don't combine these conditions, CRYPT_R_STRUCT_CRYPT_DATA
-dnl will end up defined twice
+# if we don't combine these conditions, CRYPT_R_STRUCT_CRYPT_DATA
+# will end up defined twice
 if test "$ac_cv_crypt_r_style" = "struct_crypt_data" -o \
    "$ac_cv_crypt_r_style" = "struct_crypt_data_gnu_source"; then
     AC_DEFINE(CRYPT_R_STRUCT_CRYPT_DATA, 1, [Define if crypt_r uses struct crypt_data])
