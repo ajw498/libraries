@@ -1,12 +1,19 @@
 #!/bin/sh
 
 #DIRS=zlib-1.1.4 jpeg-6b libpng gd regex libiconv-1.8 expat-1.95.4 Sablot-0.95
-DIRS=zlib-1.1.4 
+
+OPENSSL=openssl-0.9.6g
+
+CONFIGDIRS=zlib-1.1.4 
+DIRS="$CONFIGDIRS $OPENSSL"
 
 PREFIX=/home/riscos/cross/local
-for dir in $DIRS; do
+
+for dir in $CONFIGDIRS; do
  (cd $dir; ./configure --prefix=$PREFIX)
 done
+
+(cd $OPENSSL; ./Configure --prefix=$PREFIX -DNO_SYS_UN_H gcc)
 
 for dir in $DIRS; do
  (cd $dir; make clean)
@@ -14,11 +21,3 @@ for dir in $DIRS; do
  (cd $dir; make install)
 done
 
-exit
-#openssl config
-./Configure gcc --prefix=/home/riscos/cross/local
-add -DNO_SYS_UN_H to CFLAGS in Makefile
-Preprocess crypto/des/enc_read.c enc_writ.c read_pwd.c
-and remove spurious #else
-make
-make install
