@@ -22,5 +22,9 @@ EOF
 --enable-ipv6=no \
 --with-zlib=$PREFIX \
 --with-iconv=$PREFIX \
+&& touch Makefile.in \
+&& touch configure.in \
+&& touch config.h.in \
+&& touch configure \
 && make clean && make && make install) || exit 1
 
