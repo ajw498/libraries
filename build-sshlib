@@ -1,0 +1,19 @@
+#!/bin/sh
+#
+# Usage: build [prefix]
+#
+
+if [ -n "$1" ]; then
+ PREFIX=$1
+else
+ PREFIX=/home/riscos/cross/local
+fi
+
+mkdir -p $PREFIX/lib || exit 1
+
+rm -f $PREFIX/lib/librossh.a
+
+cd sshlib
+make || exit 1
+make install PREFIX=$PREFIX || exit 1
+
