@@ -52,37 +52,51 @@
  * <http://www.apache.org/>.
  */
 
-#include "networkio.h"
-#include "apr_network_io.h"
-#include "apr_general.h"
-#include "apr_strings.h"
-#include "apr_lib.h"
-#include "apr_private.h"
-#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-static apr_status_t get_local_addr(apr_socket_t *sock)
+#include "test_apr.h"
+
+#define NUM_TESTS 255
+
+apr_pool_t *p;
+
+typedef CuSuite *(testfunc)(void);
+
+testfunc *tests[NUM_TESTS] = {
+    teststr,
+    testtime,
+    testvsn,
+    testipsub,
+    testmmap,
+    testud,
+    testtable,
+    testsleep,
+    testpool,
+    testfmt,
+    NULL
+};
+
+int main(int argc, char *argv[])
 {
-    sock->local_addr->salen = sizeof(sock->local_addr->sa);
-    if (getsockname(sock->socketdes, (struct sockaddr *)&sock->local_addr->sa,
-                    &sock->local_addr->salen) < 0) {
-        return apr_get_netos_error();
-    }
-    else {
-        sock->local_port_unknown = sock->local_interface_unknown = 0;
-        /* XXX assumes sin_port and sin6_port at same offset */
-        sock->local_addr->port = ntohs(sock->local_addr->sa.sin.sin_port);
-        return APR_SUCCESS;
-    }
-}
+    CuSuiteList *alltests = CuSuiteListNew("All APR Tests");
+    CuString *output = CuStringNew();
+    int i;
 
-#ifdef _WIN32_WCE
-/* WCE lacks getservbyname */
-static void *getservbyname(const char *name, const char *proto)
-{
-    return NULL;
-}
+    apr_initialize();
+    atexit(apr_terminate);
 
-#endif
-/* Include this here so we have get_local_addr defined... */
-#include "../unix/sa_common.c"
+    CuInit(argc, argv);
+
+    apr_pool_create(&p, NULL);
+
+    for (i = 0; tests[i]; i++) {
+        CuSuiteListAdd(alltests, tests[i]());
+    }
+
+    CuSuiteListRunWithSummary(alltests);
+    CuSuiteListDetails(alltests, output);
+    printf("%s\n", output->buffer);
+    return 0;
+}
 
