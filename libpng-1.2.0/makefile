@@ -4,8 +4,8 @@
 # For conditions of distribution and use, see copyright notice in png.h
 
 # Location of the zlib library and include files
-ZLIBINC = ../zlib
-ZLIBLIB = ../zlib
+ZLIBINC = $(PREFIX)/include
+ZLIBLIB = $(PREFIX)/lib
 
 # Compiler, linker, lib and other tools
 CC = gcc
@@ -63,8 +63,6 @@ pngwio$(O): png.h pngconf.h
 pngwrite$(O): png.h pngconf.h
 pngwtran$(O): png.h pngconf.h
 pngwutil$(O): png.h pngconf.h
-
-PREFIX=/home/riscos/libs
 
 install:
 	cp libpng$(A) $(PREFIX)/lib

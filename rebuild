@@ -6,22 +6,19 @@ OPENSSL=openssl-0.9.6g
 NEON=neon-0.22.0
 EXPAT=expat-1.95.4
 ZLIB=zlib-1.1.4 
+LIBPNG=libpng-1.2.0
 REGEX=regex
-
-CONFIGDIRS=$ZLIB 
-#DIRS="$CONFIGDIRS $OPENSSL"
 
 PREFIX=/home/riscos/cross/local
 
-#for dir in $CONFIGDIRS; do
-# (cd $dir; ./configure --prefix=$PREFIX)
-#done
+#(cd $ZLIB; ./configure --prefix=$PREFIX \
+#&& make clean && make && make install) || exit 1
 
-#(cd $OPENSSL; ./Configure --prefix=$PREFIX -DNO_SYS_UN_H gcc)
+#(cd $OPENSSL; ./Configure --prefix=$PREFIX -DNO_SYS_UN_H gcc) || exit 1
 
 #(cd $EXPAT; \
 #./configure --host=arm-riscos-aof --prefix=$PREFIX \
-#&& make clean && make && make install) || exit
+#&& make clean && make && make install) || exit 1
 
 cat > $NEON/config.cache << EOF
 ac_cv_prog_cc_g=\${ac_cv_prog_cc_g=no}
@@ -32,9 +29,12 @@ EOF
 #(cd $NEON; \
 #./configure --host=arm-riscos-aof -C --prefix=$PREFIX \
 #--with-libs=$PREFIX --with-force-zlib --with-ssl \
-#&& make clean && make && make install) || exit
+#&& make clean && make && make install) || exit 1
 
-(cd $REGEX; \
-make clean && make && make install PREFIX=$PREFIX) || exit
+#(cd $REGEX; \
+#make clean && make && make install PREFIX=$PREFIX) || exit 1
+
+(cd $LIBPNG; \
+make clean && make PREFIX=$PREFIX && make install PREFIX=$PREFIX) || exit 1
 
 
