@@ -1,6 +1,7 @@
 #!/bin/sh
 
 APRUTIL=apr-util-0.9.5
+APR=../apr-0.9.5
 
 if [ -n "$1" ]; then
  PREFIX=$1
@@ -11,7 +12,7 @@ fi
 
 (cd $APRUTIL; \
 ./configure --host=arm-riscos-aof --prefix=$PREFIX \
---with-expat=$PREFIX --with-apr=../apr \
+--with-expat=$PREFIX --with-apr=$APR \
 --without-berkeley-db && \
 make clean && \
 touch uri/gen_uri_delims && \
