@@ -1,0 +1,22 @@
+/.cvsignore/1.5/Wed Jun  5 14:56:46 2002//
+/Makefile.in/1.4/Mon Jul  9 02:31:06 2001//
+/ascii.h/1.1/Wed Feb 28 14:41:26 2001//
+/asciitab.h/1.1/Wed Feb 28 14:41:26 2001//
+/config.hnw/1.1/Fri Nov  2 18:25:31 2001//
+/expat.dsp/1.5/Sun Aug 26 05:21:49 2001//
+/expat.h.in/1.3/Thu Aug 30 05:44:18 2001//
+/iasciitab.h/1.1/Wed Feb 28 14:41:26 2001//
+/latin1tab.h/1.1/Wed Feb 28 14:41:26 2001//
+/nametab.h/1.1/Wed Feb 28 14:41:26 2001//
+/utf8tab.h/1.1/Wed Feb 28 14:41:26 2001//
+/winconfig.h/1.2/Thu Mar  8 04:16:36 2001//
+/xml.dsp/1.6/Fri May 24 15:15:41 2002//
+/xmlparse.c/1.4/Thu Aug 30 05:44:18 2001//
+/xmlrole.c/1.1/Wed Feb 28 14:41:26 2001//
+/xmlrole.h/1.1/Wed Feb 28 14:41:26 2001//
+/xmltok.c/1.1/Wed Feb 28 14:41:26 2001//
+/xmltok.h/1.1/Wed Feb 28 14:41:26 2001//
+/xmltok_impl.c/1.1/Wed Feb 28 14:41:26 2001//
+/xmltok_impl.h/1.1/Wed Feb 28 14:41:26 2001//
+/xmltok_ns.c/1.1/Wed Feb 28 14:41:26 2001//
+D

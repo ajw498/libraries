@@ -1,0 +1,16 @@
+/.cvsignore/1.3/Mon Apr 22 01:25:52 2002//
+/Makefile.in/1.25/Mon Apr 22 01:24:49 2002//
+/copy.c/1.4/Fri Oct 25 00:17:00 2002//
+/dir.c/1.64/Mon Jul  1 14:04:58 2002//
+/fileacc.c/1.53/Mon Jul  1 14:04:58 2002//
+/filedup.c/1.50/Tue Jul  2 23:59:26 2002//
+/filepath.c/1.16/Fri Jul 26 07:55:57 2002//
+/filestat.c/1.57/Sun Sep 22 19:26:41 2002//
+/flock.c/1.7/Wed Mar 13 20:39:11 2002//
+/fullrw.c/1.9/Wed Mar 13 20:39:11 2002//
+/mktemp.c/1.24/Wed Mar 20 08:54:42 2002//
+/open.c/1.101/Thu Nov 14 21:26:59 2002//
+/pipe.c/1.58/Thu Oct  3 17:55:42 2002//
+/readwrite.c/1.81/Thu Jul 11 05:19:44 2002//
+/seek.c/1.27/Wed Jun 19 19:51:04 2002//
+D

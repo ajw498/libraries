@@ -1,0 +1,14 @@
+Makefile
+libtool.m4
+ltconfig
+ltmain.sh
+rules.mk
+LibD
+LibR
+Debug
+Release
+*.vcproj
+*.aps
+*.plg
+*.dep
+*.mak
