@@ -1,0 +1,24 @@
+Index: crypto/rand/rand_win.c
+===================================================================
+--- crypto/rand/rand_win.c	(revision 38)
++++ crypto/rand/rand_win.c	(working copy)
+@@ -702,15 +702,15 @@
+ 	 * have this. Use /dev/urandom if you can as /dev/random may block
+ 	 * if it runs out of random entries.  */
+ 
+-	if ((fh = fopen(DEVRANDOM, "r")) != NULL)
++	if (1/*(fh = fopen(DEVRANDOM, "r")) != NULL*/)
+ 		{
+ 		unsigned char tmpbuf[ENTROPY_NEEDED];
+-		int n;
++		int n = ENTROPY_NEEDED;
+ 		
+-		setvbuf(fh, NULL, _IONBF, 0);
++/*		setvbuf(fh, NULL, _IONBF, 0);
+ 		n=fread((unsigned char *)tmpbuf,1,ENTROPY_NEEDED,fh);
+ 		fclose(fh);
+-		RAND_add(tmpbuf,sizeof tmpbuf,n);
++*/		RAND_add(tmpbuf,sizeof tmpbuf,n);
+ 		memset(tmpbuf,0,n);
+ 		}
+ #endif

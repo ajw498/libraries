@@ -1,0 +1,15 @@
+Index: threadproc/unix/proc.c
+===================================================================
+RCS file: /home/cvspublic/apr/threadproc/unix/proc.c,v
+retrieving revision 1.60
+diff -u -r1.60 proc.c
+--- threadproc/unix/proc.c	9 Jul 2002 01:33:42 -0000	1.60
++++ threadproc/unix/proc.c	5 Dec 2002 10:22:03 -0000
+@@ -422,6 +423,7 @@
+ 
+             execvp(progname, (char * const *)args);
+         }
++        _exit(-1);
+         exit(-1);  /* if we get here, there is a problem, so exit with an
+                     * error code. */
+     }
