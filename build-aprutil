@@ -1,6 +1,6 @@
 #!/bin/sh
 
-APRUTIL=apr-util
+APRUTIL=apr-util-0.9.5
 
 if [ -n "$1" ]; then
  PREFIX=$1

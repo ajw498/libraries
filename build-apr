@@ -1,6 +1,6 @@
 #!/bin/sh
 
-APR=apr
+APR=apr-0.9.5
 
 if [ -n "$1" ]; then
  PREFIX=$1
@@ -30,6 +30,7 @@ ac_cv_func_mmap=\${ac_cv_func_mmap=yes}
 ac_cv_func_munmap=\${ac_cv_func_munmap=yes}
 ac_cv_func_strstr=${ac_cv_func_strstr=yes}
 ac_cv_func_memmove=${ac_cv_func_memmove=yes}
+apr_cv_process_shared_works=${apr_cv_process_shared_works=yes}
 EOF
 
 (cd $APR; \
