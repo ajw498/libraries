@@ -70,8 +70,8 @@ LDFLAGS="@APRUTIL_LDFLAGS@"
 
 APRUTIL_LIBNAME="@APRUTIL_LIBNAME@"
 
-APU_SOURCE_DIR="@top_srcdir@"
-APU_BUILD_DIR="@top_builddir@"
+APU_SOURCE_DIR="@abs_srcdir@"
+APU_BUILD_DIR="@abs_builddir@"
 APR_XML_EXPAT_OLD="@APR_XML_EXPAT_OLD@"
 
 show_usage()
@@ -83,6 +83,7 @@ Known values for OPTION are:
   --prefix[=DIR]    change prefix to DIR
   --bindir          print location where binaries are installed
   --includes        print include information
+  --includedir      print location where headers are installed
   --ldflags         print linker flags
   --libs            print library information
   --srcdir          print APR-util source directory
@@ -110,6 +111,12 @@ fi
 
 thisdir="`dirname $0`"
 thisdir="`cd $thisdir && pwd`"
+# If we have the realpath program, use it to resolve symlinks.
+# Otherwise, being in a symlinked dir may result in incorrect output.
+if test -x "`which realpath 2>/dev/null`"; then
+    thisdir="`realpath $thisdir`"
+    APU_SOURCE_DIR="`realpath $APU_SOURCE_DIR`"
+fi
 if test -d $bindir; then
     tmpbindir="`cd $bindir && pwd`"
 else
@@ -157,6 +164,18 @@ while test $# -gt 0; do
     ;;
     --libs)
     flags="$flags $LIBS"
+    ;;
+    --includedir)
+    if test "$location" = "installed"; then
+        flags="$includedir"
+    elif test "$location" = "source"; then
+        flags="$APU_SOURCE_DIR/include"
+    else
+        # this is for VPATH builds
+        flags="$thisdir/include $APU_SOURCE_DIR/include"
+    fi
+    echo $flags
+    exit 0
     ;;
     --includes)
     if test "$location" = "installed"; then

@@ -13,9 +13,7 @@ AC_DEFUN(APU_FIND_APR,[
     AC_MSG_ERROR(APR could not be located. Please use the --with-apr option.)
   fi
 
-  changequote(<<,>>)dnl
-  APR_BUILD_DIR="`echo $apr_config | sed 's,/[^/]*$,,'`"
-  changequote([,])dnl
+  APR_BUILD_DIR="`$apr_config --installbuilddir`"
 
   dnl make APR_BUILD_DIR an absolute directory (we'll need it in the
   dnl sub-projects in some cases)
@@ -154,7 +152,12 @@ AC_CHECK_HEADER(db.h, [
       apu_db_header=db.h
       apu_db_lib=db
       apu_db_version=4
-    ])])])
+    ], [
+      AC_CHECK_LIB(db, db_create_4001, [
+      apu_db_header=db.h
+      apu_db_lib=db
+      apu_db_version=4
+    ])])])])
 fi
 ])
 
@@ -624,7 +627,7 @@ fi
 dnl special-case the bundled distribution (use absolute dirs)
 if test "$expat_include_dir" = "xml/expat/lib" -o "$expat_include_dir" = "xml/expat-cvs/lib"; then
   bundled_subdir="`echo $expat_include_dir | sed -e 's%/lib%%'`"
-  APR_SUBDIR_CONFIG($bundled_subdir)
+  APR_SUBDIR_CONFIG($bundled_subdir, [--prefix=$prefix --exec-prefix=$exec_prefix --libdir=$libdir --includedir=$includedir --bindir=$bindir])
   expat_include_dir=$top_builddir/$bundled_subdir/lib
   expat_ldflags="-L$top_builddir/$bundled_subdir/lib"
   expat_libs="-lexpat"
@@ -636,7 +639,7 @@ if test "$expat_include_dir" = "$srcdir/xml/expat/include" -o "$expat_include_di
   dnl This is a bit of a hack.  This only works because we know that
   dnl we are working with the bundled version of the software.
   bundled_subdir="xml/expat"
-  APR_SUBDIR_CONFIG($bundled_subdir)
+  APR_SUBDIR_CONFIG($bundled_subdir, [--prefix=$prefix --exec-prefix=$exec_prefix --libdir=$libdir --includedir=$includedir --bindir=$bindir])
   expat_include_dir=$top_builddir/$bundled_subdir/lib
   expat_ldflags="-L$top_builddir/$bundled_subdir/lib"
   expat_libs="-lexpat"
@@ -669,6 +672,7 @@ AC_DEFUN(APU_FIND_LDAPLIB,[
     ldaplib=$1
     extralib=$2
     unset ac_cv_lib_${ldaplib}_ldap_init
+    unset ac_cv_lib_${ldaplib}___ldap_init
     AC_CHECK_LIB(${ldaplib}, ldap_init, 
       [
         APR_ADDTO(APRUTIL_EXPORT_LIBS,[-l${ldaplib} ${extralib}])
@@ -717,9 +721,13 @@ dnl The iPlanet C SDK 5.0 is as yet untested...
       APU_FIND_LDAPLIB("ldapssl20")
       APU_FIND_LDAPLIB("ldap", "-llber")
       APU_FIND_LDAPLIB("ldap", "-llber -lresolv")
+      APU_FIND_LDAPLIB("ldap", "-llber -lsocket -lnsl -lresolv")
       APU_FIND_LDAPLIB("ldap", "-ldl -lpthread")
     else
-      APU_FIND_LDAPLIB($LDAPLIB)
+      APU_FIND_LDAPLIB($LIBLDAP)
+      APU_FIND_LDAPLIB($LIBLDAP, "-lresolv")
+      APU_FIND_LDAPLIB($LIBLDAP, "-lsocket -lnsl -lresolv")
+      APU_FIND_LDAPLIB($LIBLDAP, "-ldl -lpthread")
     fi
 
     test ${apu_has_ldap} != "1" && AC_MSG_ERROR(could not find an LDAP library)

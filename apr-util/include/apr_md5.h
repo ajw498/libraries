@@ -103,7 +103,8 @@ extern "C" {
  */
 
 /** The MD5 digest size */
-#define MD5_DIGESTSIZE 16
+#define APR_MD5_DIGESTSIZE 16
+#define MD5_DIGESTSIZE APR_MD5_DIGESTSIZE   /**< @deprecated */
 
 /** @see apr_md5_ctx_t */
 typedef struct apr_md5_ctx_t apr_md5_ctx_t;
@@ -145,7 +146,7 @@ APU_DECLARE(apr_status_t) apr_md5_set_xlate(apr_md5_ctx_t *context,
  * @param inputLen The length of the next message block
  */
 APU_DECLARE(apr_status_t) apr_md5_update(apr_md5_ctx_t *context,
-                                         const unsigned char *input,
+                                         const void *input,
                                          apr_size_t inputLen);
 
 /**
@@ -154,7 +155,7 @@ APU_DECLARE(apr_status_t) apr_md5_update(apr_md5_ctx_t *context,
  * @param digest The final MD5 digest
  * @param context The MD5 content we are finalizing.
  */
-APU_DECLARE(apr_status_t) apr_md5_final(unsigned char digest[MD5_DIGESTSIZE],
+APU_DECLARE(apr_status_t) apr_md5_final(unsigned char digest[APR_MD5_DIGESTSIZE],
                                         apr_md5_ctx_t *context);
 
 /**
@@ -163,8 +164,8 @@ APU_DECLARE(apr_status_t) apr_md5_final(unsigned char digest[MD5_DIGESTSIZE],
  * @param input The message block to use
  * @param inputLen The length of the message block
  */
-APU_DECLARE(apr_status_t) apr_md5(unsigned char digest[MD5_DIGESTSIZE],
-                                  const unsigned char *input,
+APU_DECLARE(apr_status_t) apr_md5(unsigned char digest[APR_MD5_DIGESTSIZE],
+                                  const void *input,
                                   apr_size_t inputLen);
 
 /**

@@ -43,7 +43,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MD /W3 /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /FD /c
-# ADD CPP /nologo /MD /W3 /O2 /I "./include" /I "../apr/include" /I "./include/private" /I "../apr-iconv/include" /I "./dbm/sdbm" /I "./xml/expat/lib" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "APU_DECLARE_EXPORT" /D "APU_USE_SDBM" /Fd"Release\aprutil" /FD /c
+# ADD CPP /nologo /MD /W3 /Zi /O2 /I "./include" /I "../apr/include" /I "./include/private" /I "../apr-iconv/include" /I "./dbm/sdbm" /I "./xml/expat/lib" /D "NDEBUG" /D "APU_DECLARE_EXPORT" /D "APU_USE_SDBM" /D "WIN32" /D "_WINDOWS" /Fd"Release\libaprutil_src" /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /o /win32 "NUL"
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /o /win32 "NUL"
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
@@ -52,8 +52,8 @@ BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
-# ADD BASE LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /base:"0x6EE60000" /subsystem:windows /dll /map /machine:I386
-# ADD LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /base:"0x6EE60000" /subsystem:windows /dll /map /machine:I386
+# ADD BASE LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /base:"0x6EE60000" /subsystem:windows /dll /incremental:no /debug /machine:I386 /opt:ref
+# ADD LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /base:"0x6EE60000" /subsystem:windows /dll /incremental:no /debug /machine:I386 /opt:ref
 
 !ELSEIF  "$(CFG)" == "libaprutil - Win32 Debug"
 
@@ -69,7 +69,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /FD /c
-# ADD CPP /nologo /MDd /W3 /GX /Zi /Od /I "./include" /I "../apr/include" /I "./include/private" /I "../apr-iconv/include" /I "./dbm/sdbm" /I "./xml/expat/lib" /I "./expat/lib" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "APU_DECLARE_EXPORT" /D "APU_USE_SDBM" /Fd"Debug\aprutil" /FD /c
+# ADD CPP /nologo /MDd /W3 /GX /Zi /Od /I "./include" /I "../apr/include" /I "./include/private" /I "../apr-iconv/include" /I "./dbm/sdbm" /I "./xml/expat/lib" /D "_DEBUG" /D "APU_DECLARE_EXPORT" /D "APU_USE_SDBM" /D "WIN32" /D "_WINDOWS" /Fd"Debug\libaprutil_src" /FD /c
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /o /win32 "NUL"
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /o /win32 "NUL"
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
@@ -78,8 +78,8 @@ BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
-# ADD BASE LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /base:"0x6EE60000" /subsystem:windows /dll /incremental:no /map /debug /machine:I386
-# ADD LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /base:"0x6EE60000" /subsystem:windows /dll /incremental:no /map /debug /machine:I386
+# ADD BASE LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /base:"0x6EE60000" /subsystem:windows /dll /incremental:no /debug /machine:I386
+# ADD LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /base:"0x6EE60000" /subsystem:windows /dll /incremental:no /debug /machine:I386
 
 !ENDIF 
 
@@ -316,22 +316,22 @@ SOURCE=.\include\apr_ldap.hw
 
 !IF  "$(CFG)" == "libaprutil - Win32 Release"
 
-# Begin Custom Build - Creating apr_ldap.h from apr_ldap.hw 
+# Begin Custom Build - Creating apr_ldap.h from apr_ldap.hw
 InputPath=.\include\apr_ldap.hw
 
 ".\include\apr_ldap.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
 	type .\include\apr_ldap.hw > .\include\apr_ldap.h
-	
+
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "libaprutil - Win32 Debug"
 
-# Begin Custom Build - Creating apr_ldap.h from apr_ldap.hw 
+# Begin Custom Build - Creating apr_ldap.h from apr_ldap.hw
 InputPath=.\include\apr_ldap.hw
 
 ".\include\apr_ldap.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
 	type .\include\apr_ldap.hw > .\include\apr_ldap.h
-	
+
 # End Custom Build
 
 !ENDIF 
@@ -351,22 +351,22 @@ SOURCE=.\include\apu.hw
 
 !IF  "$(CFG)" == "libaprutil - Win32 Release"
 
-# Begin Custom Build - Creating apu.h from apu.hw 
+# Begin Custom Build - Creating apu.h from apu.hw
 InputPath=.\include\apu.hw
 
 ".\include\apu.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
 	type .\include\apu.hw > .\include\apu.h
-	
+
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "libaprutil - Win32 Debug"
 
-# Begin Custom Build - Creating apu.h from apu.hw 
+# Begin Custom Build - Creating apu.h from apu.hw
 InputPath=.\include\apu.hw
 
 ".\include\apu.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
 	type .\include\apu.hw > .\include\apu.h
-	
+
 # End Custom Build
 
 !ENDIF 
@@ -382,22 +382,22 @@ SOURCE=.\include\private\apu_config.hw
 
 !IF  "$(CFG)" == "libaprutil - Win32 Release"
 
-# Begin Custom Build - Creating apu_config.h from apu_config.hw 
+# Begin Custom Build - Creating apu_config.h from apu_config.hw
 InputPath=.\include\private\apu_config.hw
 
 ".\include\private\apu_config.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
 	type .\include\private\apu_config.hw > .\include\private\apu_config.h
-	
+
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "libaprutil - Win32 Debug"
 
-# Begin Custom Build - Creating apu_config.h from apu_config.hw 
+# Begin Custom Build - Creating apu_config.h from apu_config.hw
 InputPath=.\include\private\apu_config.hw
 
 ".\include\private\apu_config.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
 	type .\include\private\apu_config.hw > .\include\private\apu_config.h
-	
+
 # End Custom Build
 
 !ENDIF 
@@ -413,22 +413,22 @@ SOURCE=.\include\private\apu_select_dbm.hw
 
 !IF  "$(CFG)" == "libaprutil - Win32 Release"
 
-# Begin Custom Build - Creating apu_select_dbm.h from apu_select_dbm.hw 
+# Begin Custom Build - Creating apu_select_dbm.h from apu_select_dbm.hw
 InputPath=.\include\private\apu_select_dbm.hw
 
 ".\include\private\apu_select_dbm.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
 	type .\include\private\apu_select_dbm.hw > .\include\private\apu_select_dbm.h
-	
+
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "libaprutil - Win32 Debug"
 
-# Begin Custom Build - Creating apu_select_dbm.h from apu_select_dbm.hw 
+# Begin Custom Build - Creating apu_select_dbm.h from apu_select_dbm.hw
 InputPath=.\include\private\apu_select_dbm.hw
 
 ".\include\private\apu_select_dbm.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
 	type .\include\private\apu_select_dbm.hw > .\include\private\apu_select_dbm.h
-	
+
 # End Custom Build
 
 !ENDIF 
@@ -444,8 +444,8 @@ SOURCE=.\uri\gen_uri_delims.exe
 InputPath=.\uri\gen_uri_delims.exe
 
 ".\uri\uri_delims.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	.\uri\gen_uri_delims.exe >.\uri\uri_delims.h 
-	
+	.\uri\gen_uri_delims.exe >.\uri\uri_delims.h
+
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "libaprutil - Win32 Debug"
@@ -454,8 +454,8 @@ InputPath=.\uri\gen_uri_delims.exe
 InputPath=.\uri\gen_uri_delims.exe
 
 ".\uri\uri_delims.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	.\uri\gen_uri_delims.exe >.\uri\uri_delims.h 
-	
+	.\uri\gen_uri_delims.exe >.\uri\uri_delims.h
+
 # End Custom Build
 
 !ENDIF 
@@ -565,7 +565,7 @@ SOURCE=..\apr\build\win32ver.awk
 InputPath=..\apr\build\win32ver.awk
 
 ".\libaprutil.rc" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	awk -f ../apr/build/win32ver.awk libaprutil "Apache APR Utility Library"  ../../include/ap_release.h > .\libaprutil.rc
+	awk -f ../apr/build/win32ver.awk libaprutil.dll "Apache APR Utility Library"  ../../include/ap_release.h > .\libaprutil.rc
 
 # End Custom Build
 
@@ -576,7 +576,7 @@ InputPath=..\apr\build\win32ver.awk
 InputPath=..\apr\build\win32ver.awk
 
 ".\libaprutil.rc" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	awk -f ../apr/build/win32ver.awk libaprutil "Apache APR Utility Library"  ../../include/ap_release.h > .\libaprutil.rc
+	awk -f ../apr/build/win32ver.awk libaprutil.dll "Apache APR Utility Library"  ../../include/ap_release.h > .\libaprutil.rc
 
 # End Custom Build
 
