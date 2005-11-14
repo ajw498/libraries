@@ -1,6 +1,6 @@
 #!/bin/sh
 
-LIBXML=libxml2-2.6.9
+LIBXML=libxml2-2.6.22
 
 if [ -n "$1" ]; then
  PREFIX=$1
@@ -8,13 +8,14 @@ else
  PREFIX=/home/riscos/cross/local
 fi
 
-cat > $LIBXML/config.cache << EOF
-ac_cv_prog_cc_g=\${ac_cv_prog_cc_g=no}
-lt_cv_prog_cc_can_build_shared=\${lt_cv_prog_cc_can_build_shared=no}
-lt_cv_prog_cc_pic_works=\${lt_cv_prog_cc_pic_works=no}
-ac_cv_working_getnameinfo=\${ac_cv_working_getnameinfo=no}
-ac_cv_func_getaddrinfo=\${ac_cv_func_getaddrinfo=no}
-EOF
+rm -rf $LIBXML
+tar -xzf $LIBXML.tar.gz
+
+export ac_cv_prog_cc_g=no
+export lt_cv_prog_cc_can_build_shared=no
+export lt_cv_prog_cc_pic_works=no
+export c_cv_working_getnameinfo=\${ac_cv_working_getnameinfo=no
+export c_cv_func_getaddrinfo=\${ac_cv_func_getaddrinfo=no
 
 
 (cd $LIBXML; \
@@ -22,9 +23,5 @@ EOF
 --enable-ipv6=no \
 --with-zlib=$PREFIX \
 --with-iconv=$PREFIX \
-&& touch Makefile.in \
-&& touch configure.in \
-&& touch config.h.in \
-&& touch configure \
-&& make clean && make && make install) || exit 1
+&& make && make install) || exit 1
 
