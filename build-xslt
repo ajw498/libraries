@@ -1,6 +1,6 @@
 #!/bin/sh
 
-LIBXSLT=libxslt-1.1.6
+LIBXSLT=libxslt-1.1.15
 
 if [ -n "$1" ]; then
  PREFIX=$1
@@ -8,13 +8,14 @@ else
  PREFIX=/home/riscos/cross/local
 fi
 
-cat > $LIBXSLT/config.cache << EOF
-ac_cv_prog_cc_g=\${ac_cv_prog_cc_g=no}
-lt_cv_prog_cc_can_build_shared=\${lt_cv_prog_cc_can_build_shared=no}
-lt_cv_prog_cc_pic_works=\${lt_cv_prog_cc_pic_works=no}
-ac_cv_working_getnameinfo=\${ac_cv_working_getnameinfo=no}
-ac_cv_func_getaddrinfo=\${ac_cv_func_getaddrinfo=no}
-EOF
+rm -rf $LIBXSLT
+tar -xzf $LIBXSLT.tar.gz
+
+export ac_cv_prog_cc_g=no
+export lt_cv_prog_cc_can_build_shared=no
+export lt_cv_prog_cc_pic_works=no
+export ac_cv_working_getnameinfo=no
+export ac_cv_func_getaddrinfo=no
 
 
 (cd $LIBXSLT; \
@@ -22,5 +23,5 @@ EOF
   --with-libxml-prefix=$PREFIX \
   --with-libxml-include-prefix=$PREFIX \
   --with-libxml-libs-prefix=$PREFIX \
-&& make clean && make && make install) || exit 1
+&& make && make install) || exit 1
 
