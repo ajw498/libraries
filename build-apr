@@ -1,6 +1,6 @@
 #!/bin/sh
 
-APR=apr-0.9.5
+APR=apr-0.9.7
 
 if [ -n "$1" ]; then
  PREFIX=$1
@@ -8,11 +8,8 @@ else
  PREFIX=/home/riscos/cross/local
 fi
 
-# Remove pthread.h if it is a dummy header
-PTHREAD=/home/riscos/cross/include/unixlib/pthread.h
-#grep pthread_t $PTHREAD || rm -f $PTHREAD
-# pthreads not happy with apr yet
-#rm -f $PTHREAD
+rm -rf $APR
+tar -xjf $APR.tar.bz2
 
 cat > $APR/config.cache << EOF
 ac_cv_prog_cc_g=\${ac_cv_prog_cc_g=no}
