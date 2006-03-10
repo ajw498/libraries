@@ -8,6 +8,9 @@ else
  PREFIX=/home/riscos/cross/local
 fi
 
+rm -rf $GETTEXT
+tar -xzf $GETTEXT.tar.gz
+
 (cd $GETTEXT; \
 ./configure --with-included-gettext \
 --host=arm-riscos-aof --prefix=$PREFIX \
