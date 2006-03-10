@@ -11,6 +11,7 @@ fi
 
 
 (cd $APRUTIL; \
+CFLAGS=-mpoke-function-name \
 ./configure --host=arm-riscos-aof --prefix=$PREFIX \
 --with-expat=$PREFIX --with-apr=$APR \
 --without-berkeley-db && \
