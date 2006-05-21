@@ -1,0 +1,25 @@
+#!/bin/sh
+
+ICU=icu
+
+if [ -n "$1" ]; then
+ PREFIX=$1
+else
+ PREFIX=/home/riscos/cross/local
+fi
+
+rm -rf $ICU
+tar -xzf $ICU-3.4.tgz || exit 1
+
+cd icu/source
+
+cat > config.cache << EOF
+ac_cv_prog_cc_g=\${ac_cv_prog_cc_g=no}
+ac_cv_func_getaddrinfo=\${ac_cv_func_getaddrinfo=no}
+lt_cv_prog_cc_can_build_shared=\${lt_cv_prog_cc_can_build_shared=no}
+lt_cv_prog_cc_pic_works=\${lt_cv_prog_cc_pic_works=no}
+EOF
+
+(CFLAGS=-mpoke-function-name \
+./configure --host=arm-riscos-aof -C --prefix=$PREFIX \
+&& make && make install) || exit 1
