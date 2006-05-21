@@ -32,7 +32,7 @@ make clean && make && make install PREFIX=$PREFIX) || exit 1
 ./build-oslib   $PREFIX || exit 1
 ./build-openssl $PREFIX || exit 1
 ./build-expat   $PREFIX || exit 1
-#./build-neon    $PREFIX || exit 1
+./build-neon    $PREFIX || exit 1
 ./build-apr     $PREFIX || exit 1
 ./build-aprutil $PREFIX || exit 1
 #./build-iconv $PREFIX || exit 1
