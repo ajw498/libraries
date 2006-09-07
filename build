@@ -3,7 +3,6 @@
 # Usage: build [prefix]
 #
 
-REGEX=regex
 LIBJPEG=jpeg-6b
 LIBGD=gd-1.8.4
 
@@ -25,9 +24,6 @@ mkdir -p $PREFIX/bin $PREFIX/lib
 
 (cd $LIBGD; \
 make clean && make PREFIX=$PREFIX && make install PREFIX=$PREFIX) || exit 1
-
-(cd $REGEX; \
-make clean && make && make install PREFIX=$PREFIX) || exit 1
 
 ./build-oslib   $PREFIX || exit 1
 ./build-openssl $PREFIX || exit 1
