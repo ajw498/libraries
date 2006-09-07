@@ -48,7 +48,7 @@ JUNKLINT=possible pointer alignment|null effect
 all lib: libregex.a
 
 libregex.a: $(OBJS)
-	ar -c libregex.a $(OBJPRODN)
+	ar -cr libregex.a $(OBJPRODN)
 
 default:	r
 
