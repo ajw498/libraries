@@ -3,9 +3,6 @@
 # Usage: build [prefix]
 #
 
-
-LIBGD=gd-1.8.4
-
 if [ -n "$1" ]; then
  PREFIX=$1
 else
@@ -17,11 +14,7 @@ mkdir -p $PREFIX/bin $PREFIX/lib
 ./build-zlib   $PREFIX || exit 1
 ./build-png    $PREFIX || exit 1
 ./build-jpeg   $PREFIX || exit 1
-
-
-(cd $LIBGD; \
-make clean && make PREFIX=$PREFIX && make install PREFIX=$PREFIX) || exit 1
-
+./build-gd     $PREFIX || exit 1
 ./build-oslib   $PREFIX || exit 1
 ./build-openssl $PREFIX || exit 1
 ./build-expat   $PREFIX || exit 1

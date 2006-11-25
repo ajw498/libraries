@@ -1,0 +1,16 @@
+#!/bin/sh
+
+LIBGD=gd-1.8.4
+
+if [ -n "$1" ]; then
+ PREFIX=$1
+else
+ PREFIX=/home/riscos/cross/local
+fi
+
+rm -rf $LIBGD
+tar -xzf $LIBGD.tar.gz
+
+(cd $LIBGD; \
+make clean && make PREFIX=$PREFIX && make install PREFIX=$PREFIX) || exit 1
+
