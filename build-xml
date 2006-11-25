@@ -14,12 +14,12 @@ tar -xzf $LIBXML.tar.gz
 export ac_cv_prog_cc_g=no
 export lt_cv_prog_cc_can_build_shared=no
 export lt_cv_prog_cc_pic_works=no
-export c_cv_working_getnameinfo=\${ac_cv_working_getnameinfo=no
-export c_cv_func_getaddrinfo=\${ac_cv_func_getaddrinfo=no
+export c_cv_working_getnameinfo=no
+export c_cv_func_getaddrinfo=no
 
 
 (cd $LIBXML; \
-./configure --host=arm-riscos-aof --prefix=$PREFIX \
+ro-config --prefix=$PREFIX \
 --enable-ipv6=no \
 --with-zlib=$PREFIX \
 --with-iconv=$PREFIX \

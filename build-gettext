@@ -12,6 +12,6 @@ rm -rf $GETTEXT
 tar -xzf $GETTEXT.tar.gz
 
 (cd $GETTEXT; \
-./configure --with-included-gettext \
---host=arm-riscos-aof --prefix=$PREFIX \
+ro-config --with-included-gettext \
+--prefix=$PREFIX \
 && make clean && make && make install) || exit 1

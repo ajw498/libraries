@@ -8,9 +8,11 @@ else
  PREFIX=/home/riscos/cross/local
 fi
 
+rm -rf $SABLOT
+tar -xzf $SABLOT.tar.gz
 
 (cd $SABLOT; \
-./configure --host=arm-riscos-aof --prefix=$PREFIX \
+ro-config --prefix=$PREFIX \
 --with-expat=$PREFIX \
 && make clean && make && make install) || exit 1
 

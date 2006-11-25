@@ -15,7 +15,7 @@ tar -xjf $APRUTIL.tar.bz2
 
 cd $APRUTIL;
 (CFLAGS=-mpoke-function-name \
-./configure --host=arm-riscos-aof --prefix=$PREFIX \
+ro-config --prefix=$PREFIX \
 --with-expat=$PREFIX --with-apr=$APR \
 --without-berkeley-db && \
 make clean && \
