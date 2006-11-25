@@ -70,7 +70,7 @@ CC="gcc"
 with_gcc=yes
 
 # The linker used to build libraries.
-LD="/home/riscos/cross-7.7.2002/bin/arm-riscos-aof/2_95_4/ld"
+LD="/home/autobuild/cross/bin/arm-riscos-aof/3_4/ld"
 
 # Whether we need hard or soft links.
 LN_S="ln -s"
@@ -117,13 +117,13 @@ pic_flag=" -fPIC"
 pic_mode=default
 
 # Does compiler simultaneously support -c and -o options?
-compiler_c_o="no"
+compiler_c_o="yes"
 
 # Can we write directly to a .lo ?
-compiler_o_lo="no"
+compiler_o_lo="yes"
 
 # Must we lock files when doing compilation ?
-need_locks="yes"
+need_locks="no"
 
 # Do we need the lib prefix for modules?
 need_lib_prefix=unknown

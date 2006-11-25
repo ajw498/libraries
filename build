@@ -3,7 +3,7 @@
 # Usage: build [prefix]
 #
 
-LIBJPEG=jpeg-6b
+
 LIBGD=gd-1.8.4
 
 if [ -n "$1" ]; then
@@ -16,11 +16,8 @@ mkdir -p $PREFIX/bin $PREFIX/lib
 
 ./build-zlib   $PREFIX || exit 1
 ./build-png    $PREFIX || exit 1
+./build-jpeg   $PREFIX || exit 1
 
-
-(cd $LIBJPEG; \
-./configure --host=arm-riscos-aof --prefix=$PREFIX \
-&& make clean && make && make install-lib) || exit 1
 
 (cd $LIBGD; \
 make clean && make PREFIX=$PREFIX && make install PREFIX=$PREFIX) || exit 1
@@ -31,7 +28,6 @@ make clean && make PREFIX=$PREFIX && make install PREFIX=$PREFIX) || exit 1
 ./build-neon    $PREFIX || exit 1
 ./build-apr     $PREFIX || exit 1
 ./build-aprutil $PREFIX || exit 1
-#./build-iconv $PREFIX || exit 1
 ./build-xml $PREFIX || exit 1
 ./build-xslt $PREFIX || exit 1
 ./build-gettext $PREFIX || exit 1
