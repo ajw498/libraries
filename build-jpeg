@@ -1,0 +1,46 @@
+#!/bin/sh
+
+LIBJPEG=jpeg-6b
+
+if [ -n "$1" ]; then
+ PREFIX=$1
+else
+ PREFIX=/home/riscos/cross/local
+fi
+
+rm -rf $LIBJPEG
+tar -xzf $LIBJPEG.tar.gz || exit 1
+
+cd $LIBJPEG
+
+patch -p0 <<EOF
+--- config.guess.old	2003-04-04 14:28:29.000000000 +0100
++++ config.guess	2003-04-04 13:29:02.000000000 +0100
+@@ -136,6 +136,9 @@
+     arm32:NetBSD:*:*)
+ 	echo arm-unknown-netbsd`echo ${UNAME_RELEASE}|sed -e 's/[-_].*/\./'`
+ 	exit 0 ;;
++    arm:riscos:*:*)
++	echo arm-riscos-aof
++	exit 0 ;;
+     SR2?01:HI-UX/MPP:*:*)
+ 	echo hppa1.1-hitachi-hiuxmpp
+ 	exit 0;;
+EOF
+
+patch -p0 <<EOF
+--- configure.old	2006-11-25 15:00:38.000000000 +0000
++++ configure	2006-11-25 15:01:00.000000000 +0000
+@@ -1559,7 +1559,7 @@
+   if test "x\$LTSTATIC" = xno; then
+     disable_static="--disable-static"
+   fi
+-  \$srcdir/ltconfig \$disable_shared \$disable_static \$srcdir/ltmain.sh
++  \$srcdir/ltconfig \$disable_shared \$disable_static \$srcdir/ltmain.sh arm-riscos-aof
+ fi
+ 
+ # Select memory manager depending on user input.
+EOF
+
+(ro-config --prefix=$PREFIX \
+&& make clean && make && make install-lib) || exit 1
