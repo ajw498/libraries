@@ -12,6 +12,6 @@ rm -rf $GETTEXT
 tar -xzf $GETTEXT.tar.gz
 
 (cd $GETTEXT; \
-ro-config --with-included-gettext \
+ro-config --with-included-gettext --enable-nls \
 --prefix=$PREFIX \
 && make clean && make && make install) || exit 1
