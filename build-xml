@@ -21,6 +21,7 @@ export c_cv_func_getaddrinfo=no
 (cd $LIBXML; \
 ro-config --prefix=$PREFIX \
 --enable-ipv6=no \
+--without-python \
 --with-zlib=$PREFIX \
 --with-iconv=$PREFIX \
 && make && make install) || exit 1

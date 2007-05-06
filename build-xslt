@@ -23,5 +23,6 @@ ro-config --prefix=$PREFIX \
   --with-libxml-prefix=$PREFIX \
   --with-libxml-include-prefix=$PREFIX \
   --with-libxml-libs-prefix=$PREFIX \
+  --without-python \
 && make && make install) || exit 1
 
