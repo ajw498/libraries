@@ -1,6 +1,6 @@
 
 CC	=	gcc
-COPTS	=	-mthrowback -Wall -Iunix -I. -Icharset -mpoke-function-name -std=gnu9x
+COPTS	=	-Wall -Iunix -I. -Icharset -mpoke-function-name -std=gnu9x
 LINK	=	gcc
 LINKOPTS=	#-rescan
 VPATH	=	charset unix
@@ -30,7 +30,7 @@ clean:;		rm -f $(OBJS) $(SSHOBJS)
 		rm -f librossh.a
 
 librossh.a:	$(SSHOBJS)
-		libfile -c $@ $(SSHOBJS)
+		ar cr $@ $(SSHOBJS)
 
 install:
 		cp librossh.a $(PREFIX)/lib/librossh.a
