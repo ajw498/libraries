@@ -11,18 +11,4 @@ fi
 
 mkdir -p $PREFIX/bin $PREFIX/lib
 
-./build-zlib   $PREFIX || exit 1
-./build-png    $PREFIX || exit 1
-./build-jpeg   $PREFIX || exit 1
-./build-gd     $PREFIX || exit 1
-./build-oslib   $PREFIX || exit 1
-./build-openssl $PREFIX || exit 1
-./build-expat   $PREFIX || exit 1
-./build-neon    $PREFIX || exit 1
-./build-apr     $PREFIX || exit 1
-./build-aprutil $PREFIX || exit 1
-./build-xml $PREFIX || exit 1
-./build-xslt $PREFIX || exit 1
-./build-gettext $PREFIX || exit 1
-./build-sablot $PREFIX || exit 1
-./build-sshlib $PREFIX || exit 1
+make
