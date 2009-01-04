@@ -5,7 +5,7 @@ LIBXSLT=libxslt-1.1.15
 if [ -n "$1" ]; then
  PREFIX=$1
 else
- PREFIX=/home/riscos/cross/local
+ PREFIX=/home/riscos/env
 fi
 
 rm -rf $LIBXSLT
@@ -23,6 +23,7 @@ ro-config --prefix=$PREFIX \
   --with-libxml-prefix=$PREFIX \
   --with-libxml-include-prefix=$PREFIX \
   --with-libxml-libs-prefix=$PREFIX \
+  --without-crypto \
   --without-python \
 && make && make install) || exit 1
 
